@@ -11,6 +11,9 @@ from ultralytics.utils.torch_utils import fuse_conv_and_bn
 
 from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, autopad
 from .transformer import TransformerBlock
+# from mmdet.registry import MODELS
+from mmdet.models.backbones.swin import SwinBlockSequence, ShiftWindowMSA
+from .vmamba import VSSBlock
 
 __all__ = (
     "DFL",
@@ -45,6 +48,9 @@ __all__ = (
     "C3k2",
     "C2fPSA",
     "C2PSA",
+    "C2PSA_Swin",
+    "C2PSA_Mamba",
+    "C2PSA_WinAttn",
     "RepVGGDW",
     "CIB",
     "C2fCIB",
@@ -52,6 +58,7 @@ __all__ = (
     "PSA",
     "SCDown",
     "TorchVision",
+    "ADD",
 )
 
 
@@ -1353,7 +1360,6 @@ class Attention(nn.Module):
         q, k, v = qkv.view(B, self.num_heads, self.key_dim * 2 + self.head_dim, N).split(
             [self.key_dim, self.key_dim, self.head_dim], dim=2
         )
-
         attn = (q.transpose(-2, -1) @ k) * self.scale
         attn = attn.softmax(dim=-1)
         x = (v @ attn.transpose(-2, -1)).view(B, C, H, W) + self.pe(v.reshape(B, C, H, W))
@@ -1394,7 +1400,6 @@ class PSABlock(nn.Module):
             shortcut (bool): Whether to use shortcut connections.
         """
         super().__init__()
-
         self.attn = Attention(c, attn_ratio=attn_ratio, num_heads=num_heads)
         self.ffn = nn.Sequential(Conv(c, c * 2, 1), Conv(c * 2, c, 1, act=False))
         self.add = shortcut
@@ -1410,6 +1415,73 @@ class PSABlock(nn.Module):
             (torch.Tensor): Output tensor after attention and feed-forward processing.
         """
         x = x + self.attn(x) if self.add else self.attn(x)
+        x = x + self.ffn(x) if self.add else self.ffn(x)
+        return x
+
+class PSABlock_WinAttn(nn.Module):
+    """
+    PSABlock class implementing a Position-Sensitive Attention block for neural networks.
+
+    This class encapsulates the functionality for applying multi-head attention and feed-forward neural network layers
+    with optional shortcut connections.
+
+    Attributes:
+        attn (Attention): Multi-head attention module.
+        ffn (nn.Sequential): Feed-forward neural network module.
+        add (bool): Flag indicating whether to add shortcut connections.
+
+    Methods:
+        forward: Performs a forward pass through the PSABlock, applying attention and feed-forward layers.
+
+    Examples:
+        Create a PSABlock and perform a forward pass
+        >>> psablock = PSABlock(c=128, attn_ratio=0.5, num_heads=4, shortcut=True)
+        >>> input_tensor = torch.randn(1, 128, 32, 32)
+        >>> output_tensor = psablock(input_tensor)
+    """
+
+    def __init__(self, c: int, attn_ratio: float = 0.5, num_heads: int = 4, shift = False, shortcut: bool = True) -> None:
+        """
+        Initialize the PSABlock.
+
+        Args:
+            c (int): Input and output channels.
+            attn_ratio (float): Attention ratio for key dimension.
+            num_heads (int): Number of attention heads.
+            shortcut (bool): Whether to use shortcut connections.
+        """
+        super().__init__()
+        self.attn = ShiftWindowMSA(
+            embed_dims=c,
+            num_heads=num_heads,
+            window_size=4,
+            shift_size=4 // 2 if shift else 0,
+            qkv_bias=True,
+            qk_scale=False,
+            attn_drop_rate=0,
+            proj_drop_rate=0,
+            dropout_layer=dict(type='DropPath', drop_prob=0.),
+            init_cfg=None)
+        self.ffn = nn.Sequential(Conv(c, c * 2, 1), Conv(c * 2, c, 1, act=False))
+        self.add = shortcut
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Execute a forward pass through PSABlock.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            (torch.Tensor): Output tensor after attention and feed-forward processing.
+        """
+        hw_shape = (x.shape[2], x.shape[3])
+        x_ = x.flatten(2).transpose(1, 2)
+        import time
+        start = time.time()
+        output = self.attn(x_, hw_shape).transpose(1, 2).reshape(x_.shape[0], x_.shape[2], *hw_shape)
+        print(f"attn {time.time() - start:.4f} s")
+        x = x + output if self.add else output
         x = x + self.ffn(x) if self.add else self.ffn(x)
         return x
 
@@ -1466,6 +1538,7 @@ class PSA(nn.Module):
         Returns:
             (torch.Tensor): Output tensor after attention and feed-forward processing.
         """
+        import pdb;pdb.set_trace()
         a, b = self.cv1(x).split((self.c, self.c), dim=1)
         b = b + self.attn(b)
         b = b + self.ffn(b)
@@ -1512,7 +1585,7 @@ class C2PSA(nn.Module):
         self.c = int(c1 * e)
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv(2 * self.c, c1, 1)
-
+        n = 2
         self.m = nn.Sequential(*(PSABlock(self.c, attn_ratio=0.5, num_heads=self.c // 64) for _ in range(n)))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -1528,6 +1601,210 @@ class C2PSA(nn.Module):
         a, b = self.cv1(x).split((self.c, self.c), dim=1)
         b = self.m(b)
         return self.cv2(torch.cat((a, b), 1))
+
+class C2PSA_WinAttn(nn.Module):
+    """
+    C2PSA module with attention mechanism for enhanced feature extraction and processing.
+
+    This module implements a convolutional block with attention mechanisms to enhance feature extraction and processing
+    capabilities. It includes a series of PSABlock modules for self-attention and feed-forward operations.
+
+    Attributes:
+        c (int): Number of hidden channels.
+        cv1 (Conv): 1x1 convolution layer to reduce the number of input channels to 2*c.
+        cv2 (Conv): 1x1 convolution layer to reduce the number of output channels to c.
+        m (nn.Sequential): Sequential container of PSABlock modules for attention and feed-forward operations.
+
+    Methods:
+        forward: Performs a forward pass through the C2PSA module, applying attention and feed-forward operations.
+
+    Notes:
+        This module essentially is the same as PSA module, but refactored to allow stacking more PSABlock modules.
+
+    Examples:
+        >>> c2psa = C2PSA(c1=256, c2=256, n=3, e=0.5)
+        >>> input_tensor = torch.randn(1, 256, 64, 64)
+        >>> output_tensor = c2psa(input_tensor)
+    """
+
+    def __init__(self, c1: int, c2: int, n: int = 1, e: float = 0.5):
+        """
+        Initialize C2PSA module.
+
+        Args:
+            c1 (int): Input channels.
+            c2 (int): Output channels.
+            n (int): Number of PSABlock modules.
+            e (float): Expansion ratio.
+        """
+        super().__init__()
+        assert c1 == c2
+        self.c = int(c1 * e)
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+        self.cv2 = Conv(2 * self.c, c1, 1)
+        n = 2
+        self.m = nn.Sequential(*(PSABlock_WinAttn(self.c, attn_ratio=0.5, num_heads=self.c // 64, shift = False if i % 2 == 0 else True) for i in range(n)))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Process the input tensor through a series of PSA blocks.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            (torch.Tensor): Output tensor after processing.
+        """
+        a, b = self.cv1(x).split((self.c, self.c), dim=1)
+        b = self.m(b)
+        return self.cv2(torch.cat((a, b), 1))
+
+
+class C2PSA_Swin(nn.Module):
+    """
+    C2PSA module with attention mechanism for enhanced feature extraction and processing.
+
+    This module implements a convolutional block with attention mechanisms to enhance feature extraction and processing
+    capabilities. It includes a series of PSABlock modules for self-attention and feed-forward operations.
+
+    Attributes:
+        c (int): Number of hidden channels.
+        cv1 (Conv): 1x1 convolution layer to reduce the number of input channels to 2*c.
+        cv2 (Conv): 1x1 convolution layer to reduce the number of output channels to c.
+        m (nn.Sequential): Sequential container of PSABlock modules for attention and feed-forward operations.
+
+    Methods:
+        forward: Performs a forward pass through the C2PSA module, applying attention and feed-forward operations.
+
+    Notes:
+        This module essentially is the same as PSA module, but refactored to allow stacking more PSABlock modules.
+
+    Examples:
+        >>> c2psa = C2PSA(c1=256, c2=256, n=3, e=0.5)
+        >>> input_tensor = torch.randn(1, 256, 64, 64)
+        >>> output_tensor = c2psa(input_tensor)
+    """
+
+    def __init__(self, c1: int, c2: int, n: int = 1, e: float = 0.5):
+        """
+        Initialize C2PSA module.
+
+        Args:
+            c1 (int): Input channels.
+            c2 (int): Output channels.
+            n (int): Number of PSABlock modules.
+            e (float): Expansion ratio.
+        """
+        super().__init__()
+        assert c1 == c2
+        self.c = int(c1 * e)
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+        self.cv2 = Conv(2 * self.c, c1, 1)
+        n = 2
+        self.m = SwinBlockSequence(
+                embed_dims=self.c,
+                num_heads=self.c // 64,
+                feedforward_channels=4 * self.c,
+                depth=2,
+                window_size=7,
+                qkv_bias=True,
+                qk_scale=False,
+                drop_rate=0.0,
+                attn_drop_rate=0,
+                drop_path_rate=0.2,
+                downsample=None,
+                act_cfg=dict(type='GELU'),
+                norm_cfg=dict(type='LN'),
+                with_cp=False,
+                init_cfg=None)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Process the input tensor through a series of PSA blocks.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            (torch.Tensor): Output tensor after processing.
+        """
+        a, b = self.cv1(x).split((self.c, self.c), dim=1)
+        hw_shape = (b.shape[2], b.shape[3])
+        b = b.flatten(2).transpose(1, 2)
+        _, _, b, _ = self.m(b, hw_shape)
+        b = b.transpose(1, 2).reshape(b.shape[0], b.shape[2], *hw_shape)
+        return self.cv2(torch.cat((a, b), 1))
+
+class C2PSA_Mamba(nn.Module):
+    """
+    C2PSA module with attention mechanism for enhanced feature extraction and processing.
+
+    This module implements a convolutional block with attention mechanisms to enhance feature extraction and processing
+    capabilities. It includes a series of PSABlock modules for self-attention and feed-forward operations.
+
+    Attributes:
+        c (int): Number of hidden channels.
+        cv1 (Conv): 1x1 convolution layer to reduce the number of input channels to 2*c.
+        cv2 (Conv): 1x1 convolution layer to reduce the number of output channels to c.
+        m (nn.Sequential): Sequential container of PSABlock modules for attention and feed-forward operations.
+
+    Methods:
+        forward: Performs a forward pass through the C2PSA module, applying attention and feed-forward operations.
+
+    Notes:
+        This module essentially is the same as PSA module, but refactored to allow stacking more PSABlock modules.
+
+    Examples:
+        >>> c2psa = C2PSA(c1=256, c2=256, n=3, e=0.5)
+        >>> input_tensor = torch.randn(1, 256, 64, 64)
+        >>> output_tensor = c2psa(input_tensor)
+    """
+
+    def __init__(self, c1: int, c2: int, n: int = 1, e: float = 0.5):
+        """
+        Initialize C2PSA module.
+
+        Args:
+            c1 (int): Input channels.
+            c2 (int): Output channels.
+            n (int): Number of PSABlock modules.
+            e (float): Expansion ratio.
+        """
+        super().__init__()
+        assert c1 == c2
+        self.c = int(c1 * e)
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+        self.cv2 = Conv(2 * self.c, c1, 1)
+        self.m = VSSBlock(
+                hidden_dim=self.c, 
+                drop_path=0.2,
+                channel_first=True,
+                ssm_d_state=1,
+                ssm_ratio=2.0,
+                ssm_dt_rank="auto",
+                ssm_act_layer=nn.SiLU,
+                ssm_conv=3,
+                ssm_conv_bias=True,
+                ssm_drop_rate=0.1,
+                ssm_init="v0",
+                forward_type="v05_noz",
+                mlp_ratio=4.0,
+                mlp_act_layer=nn.GELU,
+                mlp_drop_rate=0.0,
+            )
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Process the input tensor through a series of PSA blocks.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            (torch.Tensor): Output tensor after processing.
+        """
+        a, b = self.cv1(x).split((self.c, self.c), dim=1)
+        b = self.m(b)
+        return self.cv2(torch.cat((a, b), 1))
+
 
 
 class C2fPSA(C2f):
@@ -1567,6 +1844,7 @@ class C2fPSA(C2f):
         """
         assert c1 == c2
         super().__init__(c1, c2, n=n, e=e)
+        n = 2
         self.m = nn.ModuleList(PSABlock(self.c, attn_ratio=0.5, num_heads=self.c // 64) for _ in range(n))
 
 
@@ -2031,3 +2309,161 @@ class SAVPE(nn.Module):
         aggregated = score.transpose(-2, -3) @ x.reshape(B, self.c, C // self.c, -1).transpose(-1, -2)
 
         return F.normalize(aggregated.transpose(-2, -3).reshape(B, Q, -1), dim=-1, p=2)
+
+class ADD(nn.Module):
+    # Stortcut a list of tensors along dimension
+    def __init__(self, alpha=0.5):
+        super(ADD, self).__init__()
+        self.a = alpha
+
+    def forward(self, x):
+        x1, x2 = x[0], x[1]
+        return torch.add(x1, x2, alpha=self.a)
+
+# class ADD(nn.Module):
+#     # Weighted add: 0.9 * x1 + 0.1 * x2
+#     # def __init__(self, w1=0.9, w2=0.1):
+#     def __init__(self, w1=1.0, w2=0):
+#         super().__init__()
+#         self.w1 = w1
+#         self.w2 = w2
+
+#     def forward(self, x):
+#         x1, x2 = x[0], x[1]
+#         return self.w1 * x1 + self.w2 * x2
+
+
+class FusionADD(nn.Module):
+    # Stortcut a list of tensors along dimension
+    def __init__(self):
+        super(FusionADD, self).__init__()
+
+    def forward(self, x):
+        alpha = x[0].mean(dim=1)          
+        feats = x[1:]        
+         
+        out = 0
+
+        for i, fi in enumerate(feats):
+            wi = alpha[:, i].view(-1, 1, 1, 1)
+            out = out + wi * fi
+        return out
+
+class FusionADD_TokenLevel(nn.Module):
+    # Stortcut a list of tensors along dimension
+    def __init__(self):
+        super(FusionADD_TokenLevel, self).__init__()
+
+    def forward(self, x):
+        alpha = x[0]          
+        feats = x[1:]         
+
+        B, HW, K = alpha.shape
+        _, C, H, W = feats[0].shape
+        assert HW == H * W
+
+        # [B, HW, K] → [B, K, H, W]
+        alpha = alpha.transpose(1, 2).reshape(B, K, H, W)
+
+        out = 0
+        for k, fk in enumerate(feats):
+            wk = alpha[:, k:k+1, :, :]   # [B,1,H,W]
+            out = out + wk * fk
+        return out
+
+class ChannelConcat(nn.Module):
+    '''
+    仅支持单通道拼接
+    '''
+    def __init__(self, dimension=1):
+        super().__init__()
+        self.d = dimension
+
+    def forward(self, x):
+        alpha = x[0]      
+        feats = x[1:]     
+        B = alpha.shape[0]
+        out = []
+
+        for b in range(B):
+            idx = torch.where(alpha[b] != 0)[0].tolist()
+            selected = [
+                feats[i][b:b+1]   
+                for i in idx
+            ]
+            out.append(torch.cat(selected, dim=self.d))  
+        return torch.cat(out, dim=0)  
+
+class VMoERouter(nn.Module):
+    def __init__(
+        self,
+        c1,                
+        num_experts: int,
+        noise_std: float = 1.0,
+        temperature: float = 1.0,
+        deterministic_infer: bool = True,
+        importance_loss_weight: float = 1.0,
+        load_loss_weight: float = 1.0,
+        gshard_loss_weight: float = 0.0,
+    ):
+        super().__init__()
+        self.num_experts = num_experts
+        self.noise_std = noise_std
+        self.temperature = temperature
+        self.deterministic_infer = deterministic_infer
+        self.importance_loss_weight = importance_loss_weight
+        self.load_loss_weight = load_loss_weight
+        self.gshard_loss_weight = gshard_loss_weight
+
+        self.dense = nn.Linear(c1, num_experts, bias=False)
+
+        self.aux_loss = None
+
+    def forward(self, x):
+        if x.dim() == 4:
+            # x = x.mean(dim=(2, 3))  
+            x = x.flatten(2).transpose(1,2)
+        logits = self.dense(x) / self.temperature
+        gates = torch.softmax(logits, dim=-1)
+        # # ===== auxiliary loss（只存，不 return）=====
+        # importance = gates.sum(dim=0)
+        # importance_loss = (importance.std(unbiased=False) / (importance.mean() + 1e-12)).pow(2)
+
+        # self.aux_loss = self.importance_loss_weight * importance_loss
+        print('测试实验！！！！')
+        gates = torch.full_like(gates, 1.0 / gates.size(-1))
+        return gates
+
+
+class VMoETopKRouter(nn.Module):
+    def __init__(
+        self,
+        c1,
+        num_experts: int,
+        k: int = 2,
+        temperature: float = 1.0,
+    ):
+        super().__init__()
+        assert k <= num_experts
+        self.num_experts = num_experts
+        self.k = k
+        self.temperature = temperature
+
+        self.dense = nn.Linear(c1, num_experts, bias=False)
+
+    def forward(self, x):
+        if x.dim() == 4:
+            # x = x.mean(dim=(2, 3))  
+            x = x.flatten(2).transpose(1,2)
+
+        logits = self.dense(x) / self.temperature    
+
+        y_soft = torch.softmax(logits, dim=-1)       
+
+        topk_idx = torch.topk(y_soft, self.k, dim=-1).indices  
+        y_hard = torch.zeros_like(y_soft)
+        y_hard.scatter_(dim=-1, index=topk_idx, value=1.0)
+        y_hard = y_hard / y_hard.sum(dim=-1, keepdim=True)
+
+        gates = (y_hard - y_soft).detach() + y_soft
+        return gates

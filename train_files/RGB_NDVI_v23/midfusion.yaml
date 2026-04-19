@@ -1,0 +1,14 @@
+# dataset v2
+train: /mnt/nfs_200T/optics/data/datasetv23_crop640_8ch20251224/Cam0/images/train # train images (relative to 'path') 4 images
+val: /mnt/nfs_200T/optics/data/datasetv23_crop640_8ch20251224/Cam0/images/val # val images (relative to 'path') 4 images
+test: /mnt/nfs_200T/optics/data/datasetv23_crop640_8ch20251224/Cam0/images/test # test images (optional)
+
+train_ch2: /mnt/nfs_200T/optics/data/datasetv23_crop640_8ch20251224/NDVI/images/train 
+val_ch2: /mnt/nfs_200T/optics/data/datasetv23_crop640_8ch20251224/NDVI/images/val 
+test_ch2: /mnt/nfs_200T/optics/data/datasetv23_crop640_8ch20251224/NDVI/images/test
+# Classes
+names:
+  0: UAV 
+
+channels:
+ 4

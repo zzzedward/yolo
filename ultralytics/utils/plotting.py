@@ -726,7 +726,8 @@ def plot_images(
     masks = labels.get("masks", np.zeros(0, dtype=np.uint8))
     kpts = labels.get("keypoints", np.zeros(0, dtype=np.float32))
     images = labels.get("img", images)  # default to input images
-
+    if isinstance(images, (list, tuple)):
+        images = images[0]
     if len(images) and isinstance(images, torch.Tensor):
         images = images.cpu().float().numpy()
     if images.shape[1] > 3:

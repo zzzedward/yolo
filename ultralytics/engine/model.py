@@ -125,7 +125,6 @@ class Model(torch.nn.Module):
         self.task = task  # task type
         self.model_name = None  # model name
         model = str(model).strip()
-
         # Check if Ultralytics HUB model from https://hub.ultralytics.com
         if self.is_hub_model(model):
             from ultralytics.hub import HUBTrainingSession
@@ -149,7 +148,6 @@ class Model(torch.nn.Module):
             self._new(model, task=task, verbose=verbose)
         else:
             self._load(model, task=task)
-
         # Delete super().training for accessing self.model.training
         del self.training
 
@@ -290,7 +288,6 @@ class Model(torch.nn.Module):
         if weights.lower().startswith(("https://", "http://", "rtsp://", "rtmp://", "tcp://")):
             weights = checks.check_file(weights, download_dir=SETTINGS["weights_dir"])  # download and return local file
         weights = checks.check_model_file_from_stem(weights)  # add suffix, i.e. yolo11n -> yolo11n.pt
-
         if str(weights).rpartition(".")[-1] == "pt":
             self.model, self.ckpt = attempt_load_one_weight(weights)
             self.task = self.model.task
@@ -538,11 +535,9 @@ class Model(torch.nn.Module):
         is_cli = (ARGV[0].endswith("yolo") or ARGV[0].endswith("ultralytics")) and any(
             x in ARGV for x in ("predict", "track", "mode=predict", "mode=track")
         )
-
         custom = {"conf": 0.25, "batch": 1, "save": is_cli, "mode": "predict", "rect": True}  # method defaults
         args = {**self.overrides, **custom, **kwargs}  # highest priority args on the right
         prompts = args.pop("prompts", None)  # for SAM-type models
-
         if not self.predictor:
             self.predictor = (predictor or self._smart_load("predictor"))(overrides=args, _callbacks=self.callbacks)
             self.predictor.setup_model(model=self.model, verbose=is_cli)
@@ -789,7 +784,6 @@ class Model(torch.nn.Module):
         args = {**overrides, **custom, **kwargs, "mode": "train"}  # highest priority args on the right
         if args.get("resume"):
             args["resume"] = self.ckpt_path
-
         self.trainer = (trainer or self._smart_load("trainer"))(overrides=args, _callbacks=self.callbacks)
         if not args.get("resume"):  # manually set model only if not resuming
             self.trainer.model = self.trainer.get_model(weights=self.model if self.ckpt else None, cfg=self.model.yaml)

@@ -9,6 +9,9 @@ from ultralytics.models import yolo
 from ultralytics.nn.tasks import (
     ClassificationModel,
     DetectionModel,
+    MidFusionDetectionModel,
+    MidFusionMoEDetectionModel,
+    CropDetectionModel,
     OBBModel,
     PoseModel,
     SegmentationModel,
@@ -95,7 +98,10 @@ class YOLO(Model):
                 "predictor": yolo.classify.ClassificationPredictor,
             },
             "detect": {
-                "model": DetectionModel,
+                # "model": DetectionModel,
+                "model": CropDetectionModel,
+                # "model": MidFusionDetectionModel,
+                # "model": MidFusionMoEDetectionModel,
                 "trainer": yolo.detect.DetectionTrainer,
                 "validator": yolo.detect.DetectionValidator,
                 "predictor": yolo.detect.DetectionPredictor,

@@ -59,21 +59,39 @@ class DetectionValidator(BaseValidator):
         self.niou = self.iouv.numel()
         self.metrics = DetMetrics()
 
-    def preprocess(self, batch: Dict[str, Any]) -> Dict[str, Any]:
+    def preprocess(self, batch):
         """
-        Preprocess batch of images for YOLO validation.
-
-        Args:
-            batch (Dict[str, Any]): Batch containing images and annotations.
-
-        Returns:
-            (Dict[str, Any]): Preprocessed batch.
+        Preprocess batch for validation.
+        支持两种格式：
+        1) 默认 YOLO batch: batch["img"]
+        2) 自定义 multi-crop batch: batch["samples"] -> sample["crop_samples"] -> crop_batch["img"]
         """
-        batch["img"] = batch["img"].to(self.device, non_blocking=True)
+        non_blocking = self.device.type == "cuda"
+
+        # =========================
+        # 自定义 multi-crop 分支
+        # =========================
+        if "samples" in batch:
+            for sample in batch["samples"]:
+                for crop_batch in sample["crop_samples"]:
+                    for k, v in crop_batch.items():
+                        if isinstance(v, torch.Tensor):
+                            crop_batch[k] = v.to(self.device, non_blocking=non_blocking)
+
+                    crop_batch["img"] = (
+                        crop_batch["img"].half() if self.args.half else crop_batch["img"].float()
+                    ) / 255
+
+            return batch
+
+        # =========================
+        # 默认 YOLO 分支
+        # =========================
+        for k, v in batch.items():
+            if isinstance(v, torch.Tensor):
+                batch[k] = v.to(self.device, non_blocking=non_blocking)
+
         batch["img"] = (batch["img"].half() if self.args.half else batch["img"].float()) / 255
-        for k in {"batch_idx", "cls", "bboxes"}:
-            batch[k] = batch[k].to(self.device)
-
         return batch
 
     def init_metrics(self, model: torch.nn.Module) -> None:

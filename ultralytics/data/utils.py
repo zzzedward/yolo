@@ -44,6 +44,12 @@ FORMATS_HELP_MSG = f"Supported formats are:\nimages: {IMG_FORMATS}\nvideos: {VID
 def img2label_paths(img_paths: List[str]) -> List[str]:
     """Convert image paths to label paths by replacing 'images' with 'labels' and extension with '.txt'."""
     sa, sb = f"{os.sep}images{os.sep}", f"{os.sep}labels{os.sep}"  # /images/, /labels/ substrings
+    if any(isinstance(x, list) for x in img_paths):
+        label_files = [[] for _ in range(len(img_paths))]
+        for i in range(len(img_paths)):
+            for x in img_paths[i]:
+                label_files[i].append(sb.join(x.rsplit(sa, 1)).rsplit(".", 1)[0] + ".txt")
+        return label_files
     return [sb.join(x.rsplit(sa, 1)).rsplit(".", 1)[0] + ".txt" for x in img_paths]
 
 
@@ -777,10 +783,16 @@ def compress_one_image(f: str, f_new: str = None, max_dim: int = 1920, quality: 
 def load_dataset_cache_file(path: Path) -> Dict:
     """Load an Ultralytics *.cache dictionary from path."""
     import gc
-
-    gc.disable()  # reduce pickle load time https://github.com/ultralytics/ultralytics/pull/1585
-    cache = np.load(str(path), allow_pickle=True).item()  # load dict
-    gc.enable()
+    if isinstance(path, list):
+        cache = [[] for _ in range(len(path))] 
+        for i in range(len(path)):
+            gc.disable()  # reduce pickle load time https://github.com/ultralytics/ultralytics/pull/1585
+            cache[i] = np.load(str(path[i]), allow_pickle=True).item()  # load dict
+            gc.enable()
+    else:
+        gc.disable()  # reduce pickle load time https://github.com/ultralytics/ultralytics/pull/1585
+        cache = np.load(str(path), allow_pickle=True).item()  # load dict
+        gc.enable()
     return cache
 
 

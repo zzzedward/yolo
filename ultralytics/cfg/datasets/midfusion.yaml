@@ -1,0 +1,31 @@
+# # quick test v2
+# path: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/ # dataset root dir
+# train: Cam0/images/train # train images (relative to 'path') 4 images
+# val: Cam0/images/val # val images (relative to 'path') 4 images
+# test: Cam0/images/test # test images (optional)
+
+# train_ch2: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/DoLP/images/train 
+# val_ch2: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/DoLP/images/val 
+# test_ch2: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/DoLP/images/test
+
+# # Classes
+# names:
+#   0: UAV 
+# channels:
+#  4
+
+# dataset v2
+train: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251224/yolo/Cam0/images/train # train images (relative to 'path') 4 images
+val: /mnt/nfs_200T/optics/data/datasetv3crop640_8ch20251224/yolo/Cam0/images/val # val images (relative to 'path') 4 images
+test: /mnt/nfs_200T/optics/data/datasetv3crop640_8ch20251224/yolo/Cam0/images/test # test images (optional)
+
+train_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251224/yolo/NDVI/images/train 
+val_ch2: /mnt/nfs_200T/optics/data/datasetv3crop640_8ch20251224/yolo/NDVI/images/val 
+test_ch2: /mnt/nfs_200T/optics/data/datasetv3crop640_8ch20251224/yolo/NDVI/images/test
+
+# Classes
+names:
+  0: UAV 
+
+channels:
+ 4

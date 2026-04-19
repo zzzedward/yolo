@@ -1,0 +1,30 @@
+train: 
+ - /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20260206/yolo/Cam0/images/train
+ - /mnt/nfs_200T/optics/data/datasetv3crop640_8ch20251224/yolo/Cam0/images/train
+val: 
+ - /mnt/nfs_200T/optics/data/datasetv4crop640_8ch20260209/yolo/Cam0/images/val 
+
+train_ch2: 
+ - /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20260206/yolo/Cam1/images/train
+ - /mnt/nfs_200T/optics/data/datasetv3crop640_8ch20251224/yolo/Cam1/images/train
+val_ch2: 
+ - /mnt/nfs_200T/optics/data/datasetv4crop640_8ch20260209/yolo/Cam1/images/val 
+
+train_ch3: 
+ - /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20260206/yolo/Cam2/images/train
+ - /mnt/nfs_200T/optics/data/datasetv3crop640_8ch20251224/yolo/Cam2/images/train
+val_ch3: 
+ - /mnt/nfs_200T/optics/data/datasetv4crop640_8ch20260209/yolo/Cam2/images/val 
+
+train_ch3: 
+ - /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20260206/yolo/Cam3/images/train
+ - /mnt/nfs_200T/optics/data/datasetv3crop640_8ch20251224/yolo/Cam3/images/train
+val_ch3: 
+ - /mnt/nfs_200T/optics/data/datasetv4crop640_8ch20260209/yolo/Cam3/images/val 
+
+# Classes
+names:
+  0: UAV 
+
+channels:
+ 6

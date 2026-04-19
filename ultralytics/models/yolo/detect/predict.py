@@ -74,7 +74,6 @@ class DetectionPredictor(BasePredictor):
             preds = preds[0]
 
         results = self.construct_results(preds, img, orig_imgs, **kwargs)
-
         if save_feats:
             for r, f in zip(results, obj_feats):
                 r.feats = f  # add object features to results

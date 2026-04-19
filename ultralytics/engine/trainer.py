@@ -125,7 +125,6 @@ class BaseTrainer:
         self.metrics = None
         self.plots = {}
         init_seeds(self.args.seed + 1 + RANK, deterministic=self.args.deterministic)
-
         # Dirs
         self.save_dir = get_save_dir(self.args)
         self.args.name = self.save_dir.name  # update name for loggers
@@ -151,7 +150,6 @@ class BaseTrainer:
         self.model = check_model_file_from_stem(self.args.model)  # add suffix, i.e. yolo11n -> yolo11n.pt
         with torch_distributed_zero_first(LOCAL_RANK):  # avoid auto-downloading dataset multiple times
             self.data = self.get_dataset()
-
         self.ema = None
 
         # Optimization utils init
@@ -254,7 +252,6 @@ class BaseTrainer:
         ckpt = self.setup_model()
         self.model = self.model.to(self.device)
         self.set_model_attributes()
-
         # Freeze layers
         freeze_list = (
             self.args.freeze
@@ -304,24 +301,40 @@ class BaseTrainer:
 
         # Dataloaders
         batch_size = self.batch_size // max(world_size, 1)
-        self.train_loader = self.get_dataloader(
-            self.data["train"], batch_size=batch_size, rank=LOCAL_RANK, mode="train"
-        )
+        if "train_ch2" not in self.data:
+            self.train_loader = self.get_dataloader(
+                self.data["train"], batch_size=batch_size, rank=LOCAL_RANK, mode="train"
+            )
+        else:
+            train_keys = [k for k in self.data.keys() if k.startswith("train")]
+            train_datasets = [self.data[k] for k in train_keys]
+            self.train_loader = self.get_dataloader(
+                train_datasets, batch_size=batch_size, rank=LOCAL_RANK, mode="train"
+            )
         if RANK in {-1, 0}:
             # Note: When training DOTA dataset, double batch size could get OOM on images with >2000 objects.
-            self.test_loader = self.get_dataloader(
-                self.data.get("val") or self.data.get("test"),
-                batch_size=batch_size if self.args.task == "obb" else batch_size * 2,
-                rank=-1,
-                mode="val",
-            )
+            if "val_ch2" not in self.data:
+                self.test_loader = self.get_dataloader(
+                    self.data.get("val") or self.data.get("test"),
+                    batch_size=batch_size if self.args.task == "obb" else batch_size * 2,
+                    rank=-1,
+                    mode="val",
+                )
+            else:
+                val_keys = [k for k in self.data.keys() if k.startswith("val")]
+                val_datasets = [self.data[k] for k in val_keys]
+                self.test_loader = self.get_dataloader(
+                    val_datasets,
+                    batch_size=batch_size if self.args.task == "obb" else batch_size * 2,
+                    rank=-1,
+                    mode="val",
+                )
             self.validator = self.get_validator()
             metric_keys = self.validator.metrics.keys + self.label_loss_items(prefix="val")
             self.metrics = dict(zip(metric_keys, [0] * len(metric_keys)))
             self.ema = ModelEMA(self.model)
             if self.args.plots:
                 self.plot_training_labels()
-
         # Optimizer
         self.accumulate = max(round(self.args.nbs / self.batch_size), 1)  # accumulate loss before optimizing
         weight_decay = self.args.weight_decay * self.batch_size * self.accumulate / self.args.nbs  # scale weight_decay
@@ -346,7 +359,6 @@ class BaseTrainer:
         if world_size > 1:
             self._setup_ddp(world_size)
         self._setup_train(world_size)
-
         nb = len(self.train_loader)  # number of batches
         nw = max(round(self.args.warmup_epochs * nb), 100) if self.args.warmup_epochs > 0 else -1  # warmup iterations
         last_opt_step = -1
@@ -371,7 +383,6 @@ class BaseTrainer:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")  # suppress 'Detected lr_scheduler.step() before optimizer.step()'
                 self.scheduler.step()
-
             self._model_train()
             if RANK != -1:
                 self.train_loader.sampler.set_epoch(epoch)
@@ -432,19 +443,35 @@ class BaseTrainer:
                 # Log
                 if RANK in {-1, 0}:
                     loss_length = self.tloss.shape[0] if len(self.tloss.shape) else 1
+
+                    if "samples" in batch:
+                        # 原图数量
+                        batch_size_display = len(batch["samples"])
+
+                        # 取第一张原图的第一块 crop 的尺寸作为显示 imgsz
+                        if batch_size_display > 0 and len(batch["samples"][0]["crop_samples"]) > 0:
+                            img0 = batch["samples"][0]["crop_samples"][0]["img"]
+                            imgsz_display = img0.shape[-1]
+                        else:
+                            imgsz_display = self.args.imgsz
+                    else:
+                        batch_size_display = batch["cls"].shape[0]
+                        imgsz_display = batch["img"].shape[-1]
+
                     pbar.set_description(
                         ("%11s" * 2 + "%11.4g" * (2 + loss_length))
                         % (
                             f"{epoch + 1}/{self.epochs}",
                             f"{self._get_memory():.3g}G",  # (GB) GPU memory util
                             *(self.tloss if loss_length > 1 else torch.unsqueeze(self.tloss, 0)),  # losses
-                            batch["cls"].shape[0],  # batch size, i.e. 8
-                            batch["img"].shape[-1],  # imgsz, i.e 640
+                            batch_size_display,
+                            imgsz_display,
                         )
                     )
                     self.run_callbacks("on_batch_end")
                     if self.args.plots and ni in self.plot_idx:
-                        self.plot_training_samples(batch, ni)
+                        if "samples" not in batch:
+                            self.plot_training_samples(batch, ni)
 
                 self.run_callbacks("on_train_batch_end")
 
@@ -603,7 +630,7 @@ class BaseTrainer:
                 "segment",
                 "pose",
                 "obb",
-            }:
+            }:  
                 data = check_det_dataset(self.args.data)
                 if "yaml_file" in data:
                     self.args.data = data["yaml_file"]  # for validating 'yolo train data=url.zip' usage

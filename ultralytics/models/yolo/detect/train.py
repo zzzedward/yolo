@@ -6,12 +6,13 @@ from copy import copy
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+import torch
 import torch.nn as nn
 
 from ultralytics.data import build_dataloader, build_yolo_dataset
 from ultralytics.engine.trainer import BaseTrainer
 from ultralytics.models import yolo
-from ultralytics.nn.tasks import DetectionModel
+from ultralytics.nn.tasks import DetectionModel, MidFusionDetectionModel, MidFusionMoEDetectionModel, CropDetectionModel
 from ultralytics.utils import LOGGER, RANK
 from ultralytics.utils.patches import override_configs
 from ultralytics.utils.plotting import plot_images, plot_labels, plot_results
@@ -91,15 +92,57 @@ class DetectionTrainer(BaseTrainer):
 
     def preprocess_batch(self, batch: Dict) -> Dict:
         """
-        Preprocess a batch of images by scaling and converting to float.
-
-        Args:
-            batch (Dict): Dictionary containing batch data with 'img' tensor.
-
-        Returns:
-            (Dict): Preprocessed batch with normalized images.
+        Preprocess batch.
+        支持两种格式：
+        1) 默认 YOLO: batch["img"]
+        2) 自定义 multi-crop: batch["samples"] -> sample["crop_samples"] -> crop_batch["img"]
         """
-        batch["img"] = batch["img"].to(self.device, non_blocking=True).float() / 255
+
+        # =========================
+        # 自定义 multi-crop 分支
+        # =========================
+        if "samples" in batch:
+            non_blocking = self.device.type == "cuda"
+
+            for sample in batch["samples"]:
+                for crop_batch in sample["crop_samples"]:
+                    for k, v in crop_batch.items():
+                        if isinstance(v, torch.Tensor):
+                            crop_batch[k] = v.to(self.device, non_blocking=non_blocking)
+
+                    # 图像归一化
+                    crop_batch["img"] = crop_batch["img"].float() / 255
+
+                    # 如果你想对子图也做 multi-scale，就在这里做
+                    # 但当前建议先关闭，避免引入额外不一致
+                    # if self.args.multi_scale:
+                    #     imgs = crop_batch["img"]
+                    #     if imgs.ndim == 3:
+                    #         imgs = imgs.unsqueeze(0)
+                    #     sz = (
+                    #         random.randrange(int(self.args.imgsz * 0.5), int(self.args.imgsz * 1.5 + self.stride))
+                    #         // self.stride
+                    #         * self.stride
+                    #     )
+                    #     sf = sz / max(imgs.shape[2:])
+                    #     if sf != 1:
+                    #         ns = [math.ceil(x * sf / self.stride) * self.stride for x in imgs.shape[2:]]
+                    #         imgs = nn.functional.interpolate(imgs, size=ns, mode="bilinear", align_corners=False)
+                    #     if crop_batch["img"].ndim == 3:
+                    #         imgs = imgs.squeeze(0)
+                    #     crop_batch["img"] = imgs
+
+            return batch
+
+        # =========================
+        # 默认 YOLO 分支
+        # =========================
+        for k, v in batch.items():
+            if isinstance(v, torch.Tensor):
+                batch[k] = v.to(self.device, non_blocking=self.device.type == "cuda")
+
+        batch["img"] = batch["img"].float() / 255
+
         if self.args.multi_scale:
             imgs = batch["img"]
             sz = (
@@ -109,13 +152,12 @@ class DetectionTrainer(BaseTrainer):
             )  # size
             sf = sz / max(imgs.shape[2:])  # scale factor
             if sf != 1:
-                ns = [
-                    math.ceil(x * sf / self.stride) * self.stride for x in imgs.shape[2:]
-                ]  # new shape (stretched to gs-multiple)
+                ns = [math.ceil(x * sf / self.stride) * self.stride for x in imgs.shape[2:]]
                 imgs = nn.functional.interpolate(imgs, size=ns, mode="bilinear", align_corners=False)
             batch["img"] = imgs
-        return batch
 
+        return batch
+    
     def set_model_attributes(self):
         """Set model attributes based on dataset information."""
         # Nl = de_parallel(self.model).model[-1].nl  # number of detection layers (to scale hyps)
@@ -132,14 +174,40 @@ class DetectionTrainer(BaseTrainer):
         Return a YOLO detection model.
 
         Args:
-            cfg (str, optional): Path to model configuration file.
+            cfg (str | dict, optional): Path to model configuration file or parsed config dict.
             weights (str, optional): Path to model weights.
             verbose (bool): Whether to display model information.
 
         Returns:
             (DetectionModel): YOLO detection model.
         """
-        model = DetectionModel(cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1)
+        # 兼容单卡/多卡下 cfg 可能是 str 或 dict
+        if isinstance(cfg, str):
+            yaml_file = cfg
+        elif isinstance(cfg, dict):
+            yaml_file = cfg.get("yaml_file", "")
+        else:
+            yaml_file = ""
+
+        yaml_file = str(yaml_file).lower()
+
+        if "moe" in yaml_file:
+            model = MidFusionMoEDetectionModel(
+                cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1
+            )
+        elif "midfusion" in yaml_file:
+            model = MidFusionDetectionModel(
+                cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1
+            )
+        elif "crop" in yaml_file:
+            model = CropDetectionModel(
+                cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1
+            )
+        else:
+            model = DetectionModel(
+                cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1
+            )
+
         if weights:
             model.load(weights)
         return model

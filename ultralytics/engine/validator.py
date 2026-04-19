@@ -183,8 +183,12 @@ class BaseValidator:
             if not (pt or (getattr(model, "dynamic", False) and not model.imx)):
                 self.args.rect = False
             self.stride = model.stride  # used in get_dataloader() for padding
-            self.dataloader = self.dataloader or self.get_dataloader(self.data.get(self.args.split), self.args.batch)
-
+            if "val_ch2" not in self.data:
+                self.dataloader = self.dataloader or self.get_dataloader(self.data.get(self.args.split), self.args.batch)
+            else:
+                val_keys = [k for k in self.data.keys() if k.startswith("val")]
+                val_datasets = [self.data[k] for k in val_keys]
+                self.dataloader = self.get_dataloader(val_datasets, self.args.batch)
             model.eval()
             model.warmup(imgsz=(1 if pt else self.args.batch, self.data["channels"], imgsz, imgsz))  # warmup
 
@@ -201,20 +205,49 @@ class BaseValidator:
         for batch_i, batch in enumerate(bar):
             self.run_callbacks("on_val_batch_start")
             self.batch_i = batch_i
+
             # Preprocess
             with dt[0]:
                 batch = self.preprocess(batch)
 
-            # Inference
+            # =========================
+            # 自定义 multi-crop val-loss 分支
+            # =========================
+            if "samples" in batch:
+                # 不走标准 preds -> postprocess -> update_metrics
+                # 直接调用 model.loss(batch)，复用你训练时已经改好的多 crop 聚合逻辑
+                with dt[1]:
+                    pass  # 这里不单独做 inference 计时，forward 已经包含在 model.loss 里
+
+                with dt[2]:
+                    loss, loss_items = model.loss(batch)
+                    loss_scalar = loss.detach()
+                    if isinstance(loss_scalar, torch.Tensor) and loss_scalar.numel() > 1:
+                        loss_scalar = loss_scalar.mean()                    
+                    
+                    if self.training:
+                        self.loss += loss_items
+
+                    if not hasattr(self, "custom_val_loss_sum"):
+                        self.custom_val_loss_sum = 0.0
+                        self.custom_val_count = 0
+
+                    self.custom_val_loss_sum += loss_scalar.item()
+                    self.custom_val_count += 1
+
+                self.run_callbacks("on_val_batch_end")
+                continue
+
+            # =========================
+            # 默认 YOLO 分支
+            # =========================
             with dt[1]:
                 preds = model(batch["img"], augment=augment)
 
-            # Loss
             with dt[2]:
                 if self.training:
                     self.loss += model.loss(batch, preds)[1]
 
-            # Postprocess
             with dt[3]:
                 preds = self.postprocess(preds)
 
@@ -224,6 +257,18 @@ class BaseValidator:
                 self.plot_predictions(batch, preds, batch_i)
 
             self.run_callbacks("on_val_batch_end")
+
+        if hasattr(self, "custom_val_count") and self.custom_val_count > 0:
+            avg_val_loss = self.custom_val_loss_sum / self.custom_val_count
+            self.run_callbacks("on_val_end")
+
+            if self.training:
+                model.float()
+                results = {"val/loss": avg_val_loss}
+                return {k: round(float(v), 5) for k, v in results.items()}
+            else:
+                return {"val/loss": avg_val_loss}
+
         stats = self.get_stats()
         self.speed = dict(zip(self.speed.keys(), (x.t / len(self.dataloader.dataset) * 1e3 for x in dt)))
         self.finalize_metrics()
@@ -232,7 +277,7 @@ class BaseValidator:
         if self.training:
             model.float()
             results = {**stats, **trainer.label_loss_items(self.loss.cpu() / len(self.dataloader), prefix="val")}
-            return {k: round(float(v), 5) for k, v in results.items()}  # return results as 5 decimal place floats
+            return {k: round(float(v), 5) for k, v in results.items()}
         else:
             LOGGER.info(
                 "Speed: {:.1f}ms preprocess, {:.1f}ms inference, {:.1f}ms loss, {:.1f}ms postprocess per image".format(
@@ -242,8 +287,8 @@ class BaseValidator:
             if self.args.save_json and self.jdict:
                 with open(str(self.save_dir / "predictions.json"), "w", encoding="utf-8") as f:
                     LOGGER.info(f"Saving {f.name}...")
-                    json.dump(self.jdict, f)  # flatten and save
-                stats = self.eval_json(stats)  # update stats
+                    json.dump(self.jdict, f)
+                stats = self.eval_json(stats)
             if self.args.plots or self.args.save_json:
                 LOGGER.info(f"Results saved to {colorstr('bold', self.save_dir)}")
             return stats

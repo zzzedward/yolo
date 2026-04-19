@@ -1,0 +1,11 @@
+# dataset v2
+train: /mnt/nfs_200T/optics/data/datasetv2_RGB/datasetv2_RGB/yolo_2048/images/train # train images (relative to 'path') 4 images
+val: /mnt/nfs_200T/optics/data/datasetv2_RGB/datasetv2_RGB/yolo_2048/images/val # val images (relative to 'path') 4 images
+test: /mnt/nfs_200T/optics/data/datasetv2_RGB/datasetv2_RGB/yolo_2048/images/test # test images (optional)
+
+# Classes
+names:
+  0: UAV 
+
+channels:
+ 3

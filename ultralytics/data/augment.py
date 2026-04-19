@@ -682,12 +682,11 @@ class Mosaic(BaseMixTransform):
         for i in range(4):
             labels_patch = labels if i == 0 else labels["mix_labels"][i - 1]
             # Load image
-            img = labels_patch["img"]
             h, w = labels_patch.pop("resized_shape")
-
+            img = labels_patch["img"]
             # Place img in img4
             if i == 0:  # top left
-                img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
+                img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8)
                 x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
                 x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
             elif i == 1:  # top right
@@ -699,11 +698,11 @@ class Mosaic(BaseMixTransform):
             elif i == 3:  # bottom right
                 x1a, y1a, x2a, y2a = xc, yc, min(xc + w, s * 2), min(s * 2, yc + h)
                 x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
-
-            img4[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # img4[ymin:ymax, xmin:xmax]
+            img4[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]
             padw = x1a - x1b
             padh = y1a - y1b
 
+            # labels_patch = self._update_labels(labels_patch, padw, padh)
             labels_patch = self._update_labels(labels_patch, padw, padh)
             mosaic_labels.append(labels_patch)
         final_labels = self._cat_labels(mosaic_labels)
@@ -1278,6 +1277,14 @@ class RandomPerspective:
         visible[out_mask] = 0
         return np.concatenate([xy, visible], axis=-1).reshape(n, nkpt, 3)
 
+    def apply_affine_to_image(self, img, M):
+        return cv2.warpPerspective(
+            img,
+            M,
+            dsize=self.size,
+            borderValue=(114, 114, 114),
+        )
+
     def __call__(self, labels):
         """
         Apply random perspective and affine transformations to an image and its associated labels.
@@ -1328,6 +1335,7 @@ class RandomPerspective:
         self.size = img.shape[1] + border[1] * 2, img.shape[0] + border[0] * 2  # w, h
         # M is affine matrix
         # Scale for func:`box_candidates`
+
         img, M, scale = self.affine_transform(img, border)
 
         bboxes = self.apply_bboxes(instances.bboxes, M)
@@ -1658,7 +1666,9 @@ class LetterBox:
         if labels is None:
             labels = {}
         img = labels.get("img") if image is None else image
+
         shape = img.shape[:2]  # current shape [height, width]
+
         new_shape = labels.pop("rect_shape", self.new_shape)
         if isinstance(new_shape, int):
             new_shape = (new_shape, new_shape)
@@ -1670,7 +1680,7 @@ class LetterBox:
 
         # Compute padding
         ratio = r, r  # width, height ratios
-        new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
+        new_unpad = round(shape[1] * r), round(shape[0] * r)
         dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  # wh padding
         if self.auto:  # minimum rectangle
             dw, dh = np.mod(dw, self.stride), np.mod(dh, self.stride)  # wh padding

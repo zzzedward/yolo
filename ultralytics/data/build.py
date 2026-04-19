@@ -10,7 +10,7 @@ import torch
 from PIL import Image
 from torch.utils.data import dataloader, distributed
 
-from ultralytics.data.dataset import GroundingDataset, YOLODataset, YOLOMultiModalDataset
+from ultralytics.data.dataset import GroundingDataset, YOLODataset, YOLOMultiModalDataset, YOLOMultiChannelDataset, YOLOCropDataset, YOLOMidfusionDataset
 from ultralytics.data.loaders import (
     LOADERS,
     LoadImagesAndVideos,
@@ -111,9 +111,24 @@ def seed_worker(worker_id: int):  # noqa
     random.seed(worker_seed)
 
 
-def build_yolo_dataset(cfg, img_path, batch, data, mode="train", rect=False, stride=32, multi_modal=False):
+def build_yolo_dataset(cfg, img_path, batch, data, mode="train", rect=False, stride=32, multi_modal=False, multi_channel=False):
+    if isinstance(img_path, list) and len(img_path) > 1 :
+        multi_channel = True
+    midfusion_modal = True if "midfusion" in cfg.data else False
+    crop_model = True if "crop" in cfg.data else False
+
     """Build and return a YOLO dataset based on configuration parameters."""
-    dataset = YOLOMultiModalDataset if multi_modal else YOLODataset
+    if midfusion_modal:
+        dataset = YOLOMidfusionDataset
+    elif multi_modal:
+        dataset = YOLOMultiModalDataset
+    elif multi_channel:
+        dataset = YOLOMultiChannelDataset
+    elif crop_model:
+        dataset = YOLOCropDataset
+    else:
+        dataset = YOLODataset
+ 
     return dataset(
         img_path=img_path,
         imgsz=cfg.imgsz,

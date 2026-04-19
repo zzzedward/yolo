@@ -1,0 +1,15 @@
+train: /mnt/nfs_200T/optics/data/FLIR_align/JPEGImages/RGB/images/train
+val: /mnt/nfs_200T/optics/data/FLIR_align/JPEGImages/RGB/images/val
+
+train_ch2: /mnt/nfs_200T/optics/data/FLIR_align/JPEGImages/PreviewData/images/train
+val_ch2: /mnt/nfs_200T/optics/data/FLIR_align/JPEGImages/PreviewData/images/val
+
+# Classes
+names:
+  0: bicycle
+  1: car
+  2: dog
+  3: person
+
+channels:
+ 6
