@@ -90,13 +90,13 @@
 
 
 import os
-import cv2
 from glob import glob
-import numpy as np
+
+import cv2
 
 root = "/mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo"
 
-cam_list = ['Cam0', 'DoLP', 'AoLP', 'NDVI']
+cam_list = ["Cam0", "DoLP", "AoLP", "NDVI"]
 
 for cam_id in cam_list:
     img_dir = os.path.join(root, cam_id, "images", "val")
@@ -112,7 +112,7 @@ for cam_id in cam_list:
             continue
 
         # 判断通道
-        if len(img.shape) == 2: 
+        if len(img.shape) == 2:
             # 单通道，跳过
             print(f"[Skip] Single-channel already: {os.path.basename(img_path)}")
             continue
