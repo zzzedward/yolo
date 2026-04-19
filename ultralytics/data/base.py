@@ -1,5 +1,7 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
+from __future__ import annotations
+
 import glob
 import math
 import os
@@ -7,7 +9,7 @@ import random
 from copy import deepcopy
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import cv2
 import numpy as np
@@ -20,11 +22,10 @@ from ultralytics.utils.patches import imread
 
 
 class BaseDataset(Dataset):
-    """
-    Base dataset class for loading and processing image data.
+    """Base dataset class for loading and processing image data.
 
-    This class provides core functionality for loading images, caching, and preparing data for training and inference
-    in object detection tasks.
+    This class provides core functionality for loading images, caching, and preparing data for training and inference in
+    object detection tasks.
 
     Attributes:
         img_path (str): Path to the folder containing images.
@@ -70,23 +71,22 @@ class BaseDataset(Dataset):
 
     def __init__(
         self,
-        img_path: Union[str, List[str]],
+        img_path: str | list[str],
         imgsz: int = 640,
-        cache: Union[bool, str] = False,
+        cache: bool | str = False,
         augment: bool = True,
-        hyp: Dict[str, Any] = DEFAULT_CFG,
+        hyp: dict[str, Any] = DEFAULT_CFG,
         prefix: str = "",
         rect: bool = False,
         batch_size: int = 16,
         stride: int = 32,
         pad: float = 0.5,
         single_cls: bool = False,
-        classes: Optional[List[int]] = None,
+        classes: list[int] | None = None,
         fraction: float = 1.0,
         channels: int = 3,
     ):
-        """
-        Initialize BaseDataset with given configuration and options.
+        """Initialize BaseDataset with given configuration and options.
 
         Args:
             img_path (str | List[str]): Path to the folder containing images or list of image paths.
@@ -146,9 +146,8 @@ class BaseDataset(Dataset):
         # Transforms
         self.transforms = self.build_transforms(hyp=hyp)
 
-    def get_img_files(self, img_path: Union[str, List[str]]) -> List[str]:
-        """
-        Read image files from the specified path.
+    def get_img_files(self, img_path: str | list[str]) -> list[str]:
+        """Read image files from the specified path.
 
         Args:
             img_path (str | List[str]): Path or list of paths to image directories or files.
@@ -184,9 +183,8 @@ class BaseDataset(Dataset):
         check_file_speeds(im_files, prefix=self.prefix)  # check image read speeds
         return im_files
 
-    def update_labels(self, include_class: Optional[List[int]]) -> None:
-        """
-        Update labels to include only specified classes.
+    def update_labels(self, include_class: list[int] | None) -> None:
+        """Update labels to include only specified classes.
 
         Args:
             include_class (List[int], optional): List of classes to include. If None, all classes are included.
@@ -208,9 +206,8 @@ class BaseDataset(Dataset):
             if self.single_cls:
                 self.labels[i]["cls"][:, 0] = 0
 
-    def load_image(self, i: int, rect_mode: bool = True) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
-        """
-        Load an image from dataset index 'i'.
+    def load_image(self, i: int, rect_mode: bool = True) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
+        """Load an image from dataset index 'i'.
 
         Args:
             i (int): Index of the image to load.
@@ -285,8 +282,7 @@ class BaseDataset(Dataset):
             np.save(f.as_posix(), imread(self.im_files[i]), allow_pickle=False)
 
     def check_cache_disk(self, safety_margin: float = 0.5) -> bool:
-        """
-        Check if there's enough disk space for caching images.
+        """Check if there's enough disk space for caching images.
 
         Args:
             safety_margin (float): Safety margin factor for disk space calculation.
@@ -309,7 +305,7 @@ class BaseDataset(Dataset):
                 LOGGER.warning(f"{self.prefix}Skipping caching images to disk, directory not writeable")
                 return False
         disk_required = b * self.ni / n * (1 + safety_margin)  # bytes required to cache dataset to disk
-        total, used, free = shutil.disk_usage(Path(self.im_files[0]).parent)
+        total, _used, free = shutil.disk_usage(Path(self.im_files[0]).parent)
         if disk_required > free:
             self.cache = None
             LOGGER.warning(
@@ -321,8 +317,7 @@ class BaseDataset(Dataset):
         return True
 
     def check_cache_ram(self, safety_margin: float = 0.5) -> bool:
-        """
-        Check if there's enough RAM for caching images.
+        """Check if there's enough RAM for caching images.
 
         Args:
             safety_margin (float): Safety margin factor for RAM calculation.
@@ -375,13 +370,12 @@ class BaseDataset(Dataset):
         self.batch_shapes = np.ceil(np.array(shapes) * self.imgsz / self.stride + self.pad).astype(int) * self.stride
         self.batch = bi  # batch index of image
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
+    def __getitem__(self, index: int) -> dict[str, Any]:
         """Return transformed label information for given index."""
         return self.transforms(self.get_image_and_label(index))
 
-    def get_image_and_label(self, index: int) -> Dict[str, Any]:
-        """
-        Get and return label information from the dataset.
+    def get_image_and_label(self, index: int) -> dict[str, Any]:
+        """Get and return label information from the dataset.
 
         Args:
             index (int): Index of the image to retrieve.
@@ -404,13 +398,12 @@ class BaseDataset(Dataset):
         """Return the length of the labels list for the dataset."""
         return len(self.labels)
 
-    def update_labels_info(self, label: Dict[str, Any]) -> Dict[str, Any]:
+    def update_labels_info(self, label: dict[str, Any]) -> dict[str, Any]:
         """Custom your label format here."""
         return label
 
-    def build_transforms(self, hyp: Optional[Dict[str, Any]] = None):
-        """
-        Users can customize augmentations here.
+    def build_transforms(self, hyp: dict[str, Any] | None = None):
+        """Users can customize augmentations here.
 
         Examples:
             >>> if self.augment:
@@ -422,9 +415,8 @@ class BaseDataset(Dataset):
         """
         raise NotImplementedError
 
-    def get_labels(self) -> List[Dict[str, Any]]:
-        """
-        Users can customize their own format here.
+    def get_labels(self) -> list[dict[str, Any]]:
+        """Users can customize their own format here.
 
         Examples:
             Ensure output is a dictionary with the following keys:
@@ -443,11 +435,10 @@ class BaseDataset(Dataset):
 
 
 class MultiChannelBaseDataset(Dataset):
-    """
-    Base dataset class for loading and processing image data.
+    """Base dataset class for loading and processing image data.
 
-    This class provides core functionality for loading images, caching, and preparing data for training and inference
-    in object detection tasks.
+    This class provides core functionality for loading images, caching, and preparing data for training and inference in
+    object detection tasks.
 
     Attributes:
         img_path (str): Path to the folder containing images.
@@ -493,23 +484,22 @@ class MultiChannelBaseDataset(Dataset):
 
     def __init__(
         self,
-        img_path: Union[str, List[str]],
+        img_path: str | list[str],
         imgsz: int = 640,
-        cache: Union[bool, str] = False,
+        cache: bool | str = False,
         augment: bool = True,
-        hyp: Dict[str, Any] = DEFAULT_CFG,
+        hyp: dict[str, Any] = DEFAULT_CFG,
         prefix: str = "",
         rect: bool = False,
         batch_size: int = 16,
         stride: int = 32,
         pad: float = 0.5,
         single_cls: bool = False,
-        classes: Optional[List[int]] = None,
+        classes: list[int] | None = None,
         fraction: float = 1.0,
         channels: int = 3,
     ):
-        """
-        Initialize BaseDataset with given configuration and options.
+        """Initialize BaseDataset with given configuration and options.
 
         Args:
             img_path (str | List[str]): Path to the folder containing images or list of image paths.
@@ -572,9 +562,8 @@ class MultiChannelBaseDataset(Dataset):
         # Transforms
         self.transforms = self.build_transforms(hyp=hyp)
 
-    def get_img_files(self, img_path: Union[str, List[str]]) -> List[str]:
-        """
-        Read image files from the specified path.
+    def get_img_files(self, img_path: str | list[str]) -> list[str]:
+        """Read image files from the specified path.
 
         Args:
             img_path (str | List[str]): Path or list of paths to image directories or files.
@@ -586,7 +575,7 @@ class MultiChannelBaseDataset(Dataset):
             FileNotFoundError: If no images are found or the path doesn't exist.
         """
         try:
-            f, im_files = [[] for _ in range(len(img_path))], [[] for _ in range(len(img_path))] # image files
+            f, im_files = [[] for _ in range(len(img_path))], [[] for _ in range(len(img_path))]  # image files
             for i, path in enumerate(img_path):
                 for p in path if isinstance(path, list) else [path]:
                     p = Path(p)  # os-agnostic
@@ -597,11 +586,15 @@ class MultiChannelBaseDataset(Dataset):
                         with open(p, encoding="utf-8") as t:
                             t = t.read().strip().splitlines()
                             parent = str(p.parent) + os.sep
-                            f[i] += [x.replace("./", parent) if x.startswith("./") else x for x in t]  # local to global path
+                            f[i] += [
+                                x.replace("./", parent) if x.startswith("./") else x for x in t
+                            ]  # local to global path
                             # F += [p.parent / x.lstrip(os.sep) for x in t]  # local to global path (pathlib)
                     else:
                         raise FileNotFoundError(f"{self.prefix}{p} does not exist")
-                im_files[i] = sorted(x.replace("/", os.sep) for x in f[i] if x.rpartition(".")[-1].lower() in IMG_FORMATS)
+                im_files[i] = sorted(
+                    x.replace("/", os.sep) for x in f[i] if x.rpartition(".")[-1].lower() in IMG_FORMATS
+                )
             # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in IMG_FORMATS])  # pathlib
             assert im_files, f"{self.prefix}No images found in {img_path}. {FORMATS_HELP_MSG}"
         except Exception as e:
@@ -611,9 +604,8 @@ class MultiChannelBaseDataset(Dataset):
         check_file_speeds(im_files, prefix=self.prefix)  # check image read speeds
         return im_files
 
-    def update_labels(self, include_class: Optional[List[int]]) -> None:
-        """
-        Update labels to include only specified classes.
+    def update_labels(self, include_class: list[int] | None) -> None:
+        """Update labels to include only specified classes.
 
         Args:
             include_class (List[int], optional): List of classes to include. If None, all classes are included.
@@ -635,9 +627,8 @@ class MultiChannelBaseDataset(Dataset):
             if self.single_cls:
                 self.labels[i]["cls"][:, 0] = 0
 
-    def load_image(self, i: int, rect_mode: bool = True) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
-        """
-        Load an image from dataset index 'i'.
+    def load_image(self, i: int, rect_mode: bool = True) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
+        """Load an image from dataset index 'i'.
 
         Args:
             i (int): Index of the image to load.
@@ -661,12 +652,16 @@ class MultiChannelBaseDataset(Dataset):
                 except Exception as e:
                     LOGGER.warning(f"{self.prefix}Removing corrupt *.npy image file {fn} due to: {e}")
                     Path(fn).unlink(missing_ok=True)
-                    if any(x in f for x in ('NDVI', "DoLP", "AoLP", "Cam1", "Cam2", "Cam3", "Cam4", "Cam5", "Cam6", "Cam7")):
+                    if any(
+                        x in f for x in ("NDVI", "DoLP", "AoLP", "Cam1", "Cam2", "Cam3", "Cam4", "Cam5", "Cam6", "Cam7")
+                    ):
                         im = imread(f, flags=cv2.IMREAD_GRAYSCALE)
                     else:
                         im = imread(f, flags=self.cv2_flag)  # BGR
             else:  # read image
-                if any(x in f for x in ('NDVI', "DoLP", "AoLP", "Cam1", "Cam2", "Cam3", "Cam4", "Cam5", "Cam6", "Cam7")):
+                if any(
+                    x in f for x in ("NDVI", "DoLP", "AoLP", "Cam1", "Cam2", "Cam3", "Cam4", "Cam5", "Cam6", "Cam7")
+                ):
                     im = imread(f, flags=cv2.IMREAD_GRAYSCALE)
                 else:
                     im = imread(f, flags=self.cv2_flag)  # BGR
@@ -685,13 +680,17 @@ class MultiChannelBaseDataset(Dataset):
 
             # Add to buffer if training with augmentations
             if self.augment:
-                self.ims[m][i], self.im_hw0[i], self.im_hw[i] = im, (h0, w0), im.shape[:2]  # im, hw_original, hw_resized
+                self.ims[m][i], self.im_hw0[i], self.im_hw[i] = (
+                    im,
+                    (h0, w0),
+                    im.shape[:2],
+                )  # im, hw_original, hw_resized
                 self.buffer.append(i)
                 if 1 < len(self.buffer) >= self.max_buffer_length:  # prevent empty buffer
                     j = self.buffer.pop(0)
                     if self.cache != "ram":
                         self.ims[m][j], self.im_hw0[j], self.im_hw[j] = None, None, None
-            
+
             image.append(im)
         image = np.concatenate(image, axis=-1)
         return image, (h0, w0), im.shape[:2]
@@ -709,7 +708,9 @@ class MultiChannelBaseDataset(Dataset):
             results = pool.imap(fcn, range(self.ni))
             pbar = TQDM(enumerate(results), total=self.ni, disable=LOCAL_RANK > 0)
             for i, x in pbar:
-                import pdb;pdb.set_trace()
+                import pdb
+
+                pdb.set_trace()
                 if self.cache == "disk":
                     b += self.npy_files[i].stat().st_size
                 else:  # 'ram'
@@ -725,8 +726,7 @@ class MultiChannelBaseDataset(Dataset):
             np.save(f.as_posix(), imread(self.im_files[i]), allow_pickle=False)
 
     def check_cache_disk(self, safety_margin: float = 0.5) -> bool:
-        """
-        Check if there's enough disk space for caching images.
+        """Check if there's enough disk space for caching images.
 
         Args:
             safety_margin (float): Safety margin factor for disk space calculation.
@@ -749,7 +749,7 @@ class MultiChannelBaseDataset(Dataset):
                 LOGGER.warning(f"{self.prefix}Skipping caching images to disk, directory not writeable")
                 return False
         disk_required = b * self.ni / n * (1 + safety_margin)  # bytes required to cache dataset to disk
-        total, used, free = shutil.disk_usage(Path(self.im_files[0]).parent)
+        total, _used, free = shutil.disk_usage(Path(self.im_files[0]).parent)
         if disk_required > free:
             self.cache = None
             LOGGER.warning(
@@ -761,8 +761,7 @@ class MultiChannelBaseDataset(Dataset):
         return True
 
     def check_cache_ram(self, safety_margin: float = 0.5) -> bool:
-        """
-        Check if there's enough RAM for caching images.
+        """Check if there's enough RAM for caching images.
 
         Args:
             safety_margin (float): Safety margin factor for RAM calculation.
@@ -815,13 +814,12 @@ class MultiChannelBaseDataset(Dataset):
         self.batch_shapes = np.ceil(np.array(shapes) * self.imgsz / self.stride + self.pad).astype(int) * self.stride
         self.batch = bi  # batch index of image
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
+    def __getitem__(self, index: int) -> dict[str, Any]:
         """Return transformed label information for given index."""
         return self.transforms(self.get_image_and_label(index))
 
-    def get_image_and_label(self, index: int) -> Dict[str, Any]:
-        """
-        Get and return label information from the dataset.
+    def get_image_and_label(self, index: int) -> dict[str, Any]:
+        """Get and return label information from the dataset.
 
         Args:
             index (int): Index of the image to retrieve.
@@ -844,13 +842,12 @@ class MultiChannelBaseDataset(Dataset):
         """Return the length of the labels list for the dataset."""
         return len(self.labels)
 
-    def update_labels_info(self, label: Dict[str, Any]) -> Dict[str, Any]:
+    def update_labels_info(self, label: dict[str, Any]) -> dict[str, Any]:
         """Custom your label format here."""
         return label
 
-    def build_transforms(self, hyp: Optional[Dict[str, Any]] = None):
-        """
-        Users can customize augmentations here.
+    def build_transforms(self, hyp: dict[str, Any] | None = None):
+        """Users can customize augmentations here.
 
         Examples:
             >>> if self.augment:
@@ -862,9 +859,8 @@ class MultiChannelBaseDataset(Dataset):
         """
         raise NotImplementedError
 
-    def get_labels(self) -> List[Dict[str, Any]]:
-        """
-        Users can customize their own format here.
+    def get_labels(self) -> list[dict[str, Any]]:
+        """Users can customize their own format here.
 
         Examples:
             Ensure output is a dictionary with the following keys:
@@ -881,12 +877,12 @@ class MultiChannelBaseDataset(Dataset):
         """
         raise NotImplementedError
 
-class CropBaseDataset(Dataset):
-    """
-    Base dataset class for loading and processing image data.
 
-    This class provides core functionality for loading images, caching, and preparing data for training and inference
-    in object detection tasks.
+class CropBaseDataset(Dataset):
+    """Base dataset class for loading and processing image data.
+
+    This class provides core functionality for loading images, caching, and preparing data for training and inference in
+    object detection tasks.
 
     Attributes:
         img_path (str): Path to the folder containing images.
@@ -929,22 +925,23 @@ class CropBaseDataset(Dataset):
         build_transforms: Build transformation pipeline to be implemented by subclasses.
         get_labels: Get labels method to be implemented by subclasses.
     """
+
     def __init__(
         self,
-        img_path: Union[str, List[str]],
+        img_path: str | list[str],
         imgsz: int = 640,
         crop_size=640,
         overlap=0,
-        cache: Union[bool, str] = False,
+        cache: bool | str = False,
         augment: bool = True,
-        hyp: Dict[str, Any] = DEFAULT_CFG,
+        hyp: dict[str, Any] = DEFAULT_CFG,
         prefix: str = "",
         rect: bool = False,
         batch_size: int = 16,
         stride: int = 32,
         pad: float = 0.5,
         single_cls: bool = False,
-        classes: Optional[List[int]] = None,
+        classes: list[int] | None = None,
         fraction: float = 1.0,
         channels: int = 3,
     ):
@@ -994,9 +991,8 @@ class CropBaseDataset(Dataset):
 
         self.transforms = self.build_transforms(hyp=hyp)
 
-    def get_img_files(self, img_path: Union[str, List[str]]) -> List[str]:
-        """
-        Read image files from the specified path.
+    def get_img_files(self, img_path: str | list[str]) -> list[str]:
+        """Read image files from the specified path.
 
         Args:
             img_path (str | List[str]): Path or list of paths to image directories or files.
@@ -1032,9 +1028,8 @@ class CropBaseDataset(Dataset):
         check_file_speeds(im_files, prefix=self.prefix)  # check image read speeds
         return im_files
 
-    def update_labels(self, include_class: Optional[List[int]]) -> None:
-        """
-        Update labels to include only specified classes.
+    def update_labels(self, include_class: list[int] | None) -> None:
+        """Update labels to include only specified classes.
 
         Args:
             include_class (List[int], optional): List of classes to include. If None, all classes are included.
@@ -1056,10 +1051,8 @@ class CropBaseDataset(Dataset):
             if self.single_cls:
                 self.labels[i]["cls"][:, 0] = 0
 
-    def load_image(self, i: int, rect_mode: bool = True) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
-        """
-        Load original image by original-image index i.
-        这里的 i 是原图索引，不是 crop 样本索引。
+    def load_image(self, i: int, rect_mode: bool = True) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
+        """Load original image by original-image index i. 这里的 i 是原图索引，不是 crop 样本索引。.
         """
         file_list = getattr(self, "orig_im_files", self.im_files)
 
@@ -1121,8 +1114,7 @@ class CropBaseDataset(Dataset):
             np.save(f.as_posix(), imread(self.im_files[i]), allow_pickle=False)
 
     def check_cache_disk(self, safety_margin: float = 0.5) -> bool:
-        """
-        Check if there's enough disk space for caching images.
+        """Check if there's enough disk space for caching images.
 
         Args:
             safety_margin (float): Safety margin factor for disk space calculation.
@@ -1145,7 +1137,7 @@ class CropBaseDataset(Dataset):
                 LOGGER.warning(f"{self.prefix}Skipping caching images to disk, directory not writeable")
                 return False
         disk_required = b * self.ni / n * (1 + safety_margin)  # bytes required to cache dataset to disk
-        total, used, free = shutil.disk_usage(Path(self.im_files[0]).parent)
+        total, _used, free = shutil.disk_usage(Path(self.im_files[0]).parent)
         if disk_required > free:
             self.cache = None
             LOGGER.warning(
@@ -1157,8 +1149,7 @@ class CropBaseDataset(Dataset):
         return True
 
     def check_cache_ram(self, safety_margin: float = 0.5) -> bool:
-        """
-        Check if there's enough RAM for caching images.
+        """Check if there's enough RAM for caching images.
 
         Args:
             safety_margin (float): Safety margin factor for RAM calculation.
@@ -1211,21 +1202,19 @@ class CropBaseDataset(Dataset):
         self.batch_shapes = np.ceil(np.array(shapes) * self.imgsz / self.stride + self.pad).astype(int) * self.stride
         self.batch = bi  # batch index of image
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
+    def __getitem__(self, index: int) -> dict[str, Any]:
         """Return transformed label information for given index."""
         return self.get_image_and_label(index)
 
-    def get_image_and_label(self, index: int) -> Dict[str, Any]:
-        """
-        返回一个原图 sample，其中包含多个 crop 子样本。
-        每个 crop 子样本都包含 img/cls/bboxes/batch_idx，可直接送入 criterion。
+    def get_image_and_label(self, index: int) -> dict[str, Any]:
+        """返回一个原图 sample，其中包含多个 crop 子样本。 每个 crop 子样本都包含 img/cls/bboxes/batch_idx，可直接送入 criterion。.
         """
         label = deepcopy(self.labels[index])  # 原图级 label
         full_img, ori_shape, _ = self.load_image(index)
         h, w = ori_shape
 
-        cls = label["cls"].astype(np.float32)           # (n,1)
-        bboxes = label["bboxes"].astype(np.float32)     # (n,4), normalized xywh
+        cls = label["cls"].astype(np.float32)  # (n,1)
+        bboxes = label["bboxes"].astype(np.float32)  # (n,4), normalized xywh
 
         crop_size = self.crop_size
         stride = self.stride_crop
@@ -1357,13 +1346,12 @@ class CropBaseDataset(Dataset):
         """Return the length of the labels list for the dataset."""
         return len(self.labels)
 
-    def update_labels_info(self, label: Dict[str, Any]) -> Dict[str, Any]:
+    def update_labels_info(self, label: dict[str, Any]) -> dict[str, Any]:
         """Custom your label format here."""
         return label
 
-    def build_transforms(self, hyp: Optional[Dict[str, Any]] = None):
-        """
-        Users can customize augmentations here.
+    def build_transforms(self, hyp: dict[str, Any] | None = None):
+        """Users can customize augmentations here.
 
         Examples:
             >>> if self.augment:
@@ -1375,9 +1363,8 @@ class CropBaseDataset(Dataset):
         """
         raise NotImplementedError
 
-    def get_labels(self) -> List[Dict[str, Any]]:
-        """
-        Users can customize their own format here.
+    def get_labels(self) -> list[dict[str, Any]]:
+        """Users can customize their own format here.
 
         Examples:
             Ensure output is a dictionary with the following keys:
@@ -1394,12 +1381,12 @@ class CropBaseDataset(Dataset):
         """
         raise NotImplementedError
 
-class MidfusionBaseDataset(Dataset):
-    """
-    Base dataset class for loading and processing image data.
 
-    This class provides core functionality for loading images, caching, and preparing data for training and inference
-    in object detection tasks.
+class MidfusionBaseDataset(Dataset):
+    """Base dataset class for loading and processing image data.
+
+    This class provides core functionality for loading images, caching, and preparing data for training and inference in
+    object detection tasks.
 
     Attributes:
         img_path (str): Path to the folder containing images.
@@ -1445,23 +1432,22 @@ class MidfusionBaseDataset(Dataset):
 
     def __init__(
         self,
-        img_path: Union[str, List[str]],
+        img_path: str | list[str],
         imgsz: int = 640,
-        cache: Union[bool, str] = False,
+        cache: bool | str = False,
         augment: bool = True,
-        hyp: Dict[str, Any] = DEFAULT_CFG,
+        hyp: dict[str, Any] = DEFAULT_CFG,
         prefix: str = "",
         rect: bool = False,
         batch_size: int = 16,
         stride: int = 32,
         pad: float = 0.5,
         single_cls: bool = False,
-        classes: Optional[List[int]] = None,
+        classes: list[int] | None = None,
         fraction: float = 1.0,
         channels: int = 3,
     ):
-        """
-        Initialize BaseDataset with given configuration and options.
+        """Initialize BaseDataset with given configuration and options.
 
         Args:
             img_path (str | List[str]): Path to the folder containing images or list of image paths.
@@ -1524,9 +1510,8 @@ class MidfusionBaseDataset(Dataset):
         # Transforms
         self.transforms = self.build_transforms(hyp=hyp)
 
-    def get_img_files(self, img_path: Union[str, List[str]]) -> List[str]:
-        """
-        Read image files from the specified path.
+    def get_img_files(self, img_path: str | list[str]) -> list[str]:
+        """Read image files from the specified path.
 
         Args:
             img_path (str | List[str]): Path or list of paths to image directories or files.
@@ -1538,7 +1523,7 @@ class MidfusionBaseDataset(Dataset):
             FileNotFoundError: If no images are found or the path doesn't exist.
         """
         try:
-            f, im_files = [[] for _ in range(len(img_path))], [[] for _ in range(len(img_path))] # image files
+            f, im_files = [[] for _ in range(len(img_path))], [[] for _ in range(len(img_path))]  # image files
             for i, path in enumerate(img_path):
                 for p in path if isinstance(path, list) else [path]:
                     p = Path(p)  # os-agnostic
@@ -1549,11 +1534,15 @@ class MidfusionBaseDataset(Dataset):
                         with open(p, encoding="utf-8") as t:
                             t = t.read().strip().splitlines()
                             parent = str(p.parent) + os.sep
-                            f[i] += [x.replace("./", parent) if x.startswith("./") else x for x in t]  # local to global path
+                            f[i] += [
+                                x.replace("./", parent) if x.startswith("./") else x for x in t
+                            ]  # local to global path
                             # F += [p.parent / x.lstrip(os.sep) for x in t]  # local to global path (pathlib)
                     else:
                         raise FileNotFoundError(f"{self.prefix}{p} does not exist")
-                im_files[i] = sorted(x.replace("/", os.sep) for x in f[i] if x.rpartition(".")[-1].lower() in IMG_FORMATS)
+                im_files[i] = sorted(
+                    x.replace("/", os.sep) for x in f[i] if x.rpartition(".")[-1].lower() in IMG_FORMATS
+                )
             # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in IMG_FORMATS])  # pathlib
             assert im_files, f"{self.prefix}No images found in {img_path}. {FORMATS_HELP_MSG}"
         except Exception as e:
@@ -1563,9 +1552,8 @@ class MidfusionBaseDataset(Dataset):
         check_file_speeds(im_files, prefix=self.prefix)  # check image read speeds
         return im_files
 
-    def update_labels(self, include_class: Optional[List[int]]) -> None:
-        """
-        Update labels to include only specified classes.
+    def update_labels(self, include_class: list[int] | None) -> None:
+        """Update labels to include only specified classes.
 
         Args:
             include_class (List[int], optional): List of classes to include. If None, all classes are included.
@@ -1587,9 +1575,8 @@ class MidfusionBaseDataset(Dataset):
             if self.single_cls:
                 self.labels[i]["cls"][:, 0] = 0
 
-    def load_image(self, i: int, rect_mode: bool = True) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
-        """
-        Load an image from dataset index 'i'.
+    def load_image(self, i: int, rect_mode: bool = True) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
+        """Load an image from dataset index 'i'.
 
         Args:
             i (int): Index of the image to load.
@@ -1613,12 +1600,16 @@ class MidfusionBaseDataset(Dataset):
                 except Exception as e:
                     LOGGER.warning(f"{self.prefix}Removing corrupt *.npy image file {fn} due to: {e}")
                     Path(fn).unlink(missing_ok=True)
-                    if any(x in f for x in ('NDVI', "DoLP", "AoLP", "Cam1", "Cam2", "Cam3", "Cam4", "Cam5", "Cam6", "Cam7")):
+                    if any(
+                        x in f for x in ("NDVI", "DoLP", "AoLP", "Cam1", "Cam2", "Cam3", "Cam4", "Cam5", "Cam6", "Cam7")
+                    ):
                         im = imread(f, flags=cv2.IMREAD_GRAYSCALE)
                     else:
                         im = imread(f, flags=self.cv2_flag)  # BGR
             else:  # read image
-                if any(x in f for x in ('NDVI', "DoLP", "AoLP", "Cam1", "Cam2", "Cam3", "Cam4", "Cam5", "Cam6", "Cam7")):
+                if any(
+                    x in f for x in ("NDVI", "DoLP", "AoLP", "Cam1", "Cam2", "Cam3", "Cam4", "Cam5", "Cam6", "Cam7")
+                ):
                     im = imread(f, flags=cv2.IMREAD_GRAYSCALE)
                 else:
                     im = imread(f, flags=self.cv2_flag)  # BGR
@@ -1637,13 +1628,17 @@ class MidfusionBaseDataset(Dataset):
 
             # Add to buffer if training with augmentations
             if self.augment:
-                self.ims[m][i], self.im_hw0[i], self.im_hw[i] = im, (h0, w0), im.shape[:2]  # im, hw_original, hw_resized
+                self.ims[m][i], self.im_hw0[i], self.im_hw[i] = (
+                    im,
+                    (h0, w0),
+                    im.shape[:2],
+                )  # im, hw_original, hw_resized
                 self.buffer.append(i)
                 if 1 < len(self.buffer) >= self.max_buffer_length:  # prevent empty buffer
                     j = self.buffer.pop(0)
                     if self.cache != "ram":
                         self.ims[m][j], self.im_hw0[j], self.im_hw[j] = None, None, None
-            if 'Cam0' in f or 'RGB' in f:
+            if "Cam0" in f or "RGB" in f:
                 image[0].append(im)
             else:
                 image[1].append(im)
@@ -1680,8 +1675,7 @@ class MidfusionBaseDataset(Dataset):
             np.save(f.as_posix(), imread(self.im_files[i]), allow_pickle=False)
 
     def check_cache_disk(self, safety_margin: float = 0.5) -> bool:
-        """
-        Check if there's enough disk space for caching images.
+        """Check if there's enough disk space for caching images.
 
         Args:
             safety_margin (float): Safety margin factor for disk space calculation.
@@ -1704,7 +1698,7 @@ class MidfusionBaseDataset(Dataset):
                 LOGGER.warning(f"{self.prefix}Skipping caching images to disk, directory not writeable")
                 return False
         disk_required = b * self.ni / n * (1 + safety_margin)  # bytes required to cache dataset to disk
-        total, used, free = shutil.disk_usage(Path(self.im_files[0]).parent)
+        total, _used, free = shutil.disk_usage(Path(self.im_files[0]).parent)
         if disk_required > free:
             self.cache = None
             LOGGER.warning(
@@ -1716,8 +1710,7 @@ class MidfusionBaseDataset(Dataset):
         return True
 
     def check_cache_ram(self, safety_margin: float = 0.5) -> bool:
-        """
-        Check if there's enough RAM for caching images.
+        """Check if there's enough RAM for caching images.
 
         Args:
             safety_margin (float): Safety margin factor for RAM calculation.
@@ -1770,13 +1763,12 @@ class MidfusionBaseDataset(Dataset):
         self.batch_shapes = np.ceil(np.array(shapes) * self.imgsz / self.stride + self.pad).astype(int) * self.stride
         self.batch = bi  # batch index of image
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
+    def __getitem__(self, index: int) -> dict[str, Any]:
         """Return transformed label information for given index."""
         return self.transforms(self.get_image_and_label(index))
 
-    def get_image_and_label(self, index: int) -> Dict[str, Any]:
-        """
-        Get and return label information from the dataset.
+    def get_image_and_label(self, index: int) -> dict[str, Any]:
+        """Get and return label information from the dataset.
 
         Args:
             index (int): Index of the image to retrieve.
@@ -1799,13 +1791,12 @@ class MidfusionBaseDataset(Dataset):
         """Return the length of the labels list for the dataset."""
         return len(self.labels)
 
-    def update_labels_info(self, label: Dict[str, Any]) -> Dict[str, Any]:
+    def update_labels_info(self, label: dict[str, Any]) -> dict[str, Any]:
         """Custom your label format here."""
         return label
 
-    def build_transforms(self, hyp: Optional[Dict[str, Any]] = None):
-        """
-        Users can customize augmentations here.
+    def build_transforms(self, hyp: dict[str, Any] | None = None):
+        """Users can customize augmentations here.
 
         Examples:
             >>> if self.augment:
@@ -1817,9 +1808,8 @@ class MidfusionBaseDataset(Dataset):
         """
         raise NotImplementedError
 
-    def get_labels(self) -> List[Dict[str, Any]]:
-        """
-        Users can customize their own format here.
+    def get_labels(self) -> list[dict[str, Any]]:
+        """Users can customize their own format here.
 
         Examples:
             Ensure output is a dictionary with the following keys:

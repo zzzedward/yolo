@@ -1,11 +1,15 @@
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "5,6,7"
 
-from ultralytics import YOLO
 import glob
-import numpy as np
-import cv2
 import time
+
+import cv2
+import numpy as np
+
+from ultralytics import YOLO
+
 # -------------------------------
 # 配置
 # -------------------------------
@@ -25,9 +29,11 @@ model = YOLO(model_path)
 img_lists = []
 for ch in channel_list:
     ch_dir = os.path.join(root_dir, ch, "images/test")
-    img_paths = sorted(glob.glob(os.path.join(ch_dir, "*.jpg")) +
-                       glob.glob(os.path.join(ch_dir, "*.png")) +
-                       glob.glob(os.path.join(ch_dir, "*.jpeg")))
+    img_paths = sorted(
+        glob.glob(os.path.join(ch_dir, "*.jpg"))
+        + glob.glob(os.path.join(ch_dir, "*.png"))
+        + glob.glob(os.path.join(ch_dir, "*.jpeg"))
+    )
     img_lists.append(img_paths)
 
 # 确保每个通道文件数量一致
@@ -36,11 +42,12 @@ assert all([len(img_lists[0]) == len(img) for img in img_lists]), "各通道图�
 # 标签路径（只用 color 通道）
 label_dir = os.path.join(root_dir, "color/labels/test")
 
+
 # -------------------------------
 # 工具函数
 # -------------------------------
 def read_and_stack(idx):
-    """读取每个通道同名图片并在通道维度拼接，保留原通道数"""
+    """读取每个通道同名图片并在通道维度拼接，保留原通道数."""
     imgs = []
     for ch_idx, ch in enumerate(channel_list):
         img_path = img_lists[ch_idx][idx]
@@ -53,25 +60,28 @@ def read_and_stack(idx):
         imgs.append(img)
     return np.concatenate(imgs, axis=2)  # shape=(H,W,sum(通道数))
 
+
 def yolo_to_xyxy(box, img_w, img_h):
-    """YOLO格式(x_center, y_center, w, h) -> (x1, y1, x2, y2)"""
+    """YOLO格式(x_center, y_center, w, h) -> (x1, y1, x2, y2)."""
     x_c, y_c, w, h = box
-    x1 = (x_c - w/2) * img_w
-    y1 = (y_c - h/2) * img_h
-    x2 = (x_c + w/2) * img_w
-    y2 = (y_c + h/2) * img_h
+    x1 = (x_c - w / 2) * img_w
+    y1 = (y_c - h / 2) * img_h
+    x2 = (x_c + w / 2) * img_w
+    y2 = (y_c + h / 2) * img_h
     return [x1, y1, x2, y2]
 
+
 def compute_iou(box1, box2):
-    """计算两个框的IoU"""
+    """计算两个框的IoU."""
     x1 = max(box1[0], box2[0])
     y1 = max(box1[1], box2[1])
     x2 = min(box1[2], box2[2])
     y2 = min(box1[3], box2[3])
-    inter_area = max(0, x2-x1) * max(0, y2-y1)
-    box1_area = (box1[2]-box1[0]) * (box1[3]-box1[1])
-    box2_area = (box2[2]-box2[0]) * (box2[3]-box2[1])
+    inter_area = max(0, x2 - x1) * max(0, y2 - y1)
+    box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+    box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
     return inter_area / (box1_area + box2_area - inter_area + 1e-6)
+
 
 # -------------------------------
 # 批量推理
@@ -82,31 +92,25 @@ non_iou_time = 0.0
 
 for i in range(0, len(img_lists[0]), batch_size):
     t0 = time.time()
-    batch_imgs = [read_and_stack(j) for j in range(i, min(i+batch_size, len(img_lists[0])))]
-    
+    batch_imgs = [read_and_stack(j) for j in range(i, min(i + batch_size, len(img_lists[0])))]
+
     # 推理
-    results = model.predict(
-        batch_imgs,
-        conf=0.5,
-        save=True,
-        stream=False,
-        verbose=False
-    ) 
+    results = model.predict(batch_imgs, conf=0.5, save=True, stream=False, verbose=False)
     all_results.extend(results)
 
     t1 = time.time()
-    non_iou_time += (t1 - t0) 
+    non_iou_time += t1 - t0
 
     # 计算 IoU
-    for r, idx in zip(results, range(i, min(i+batch_size, len(img_lists[0])))):
+    for r, idx in zip(results, range(i, min(i + batch_size, len(img_lists[0])))):
         img_h, img_w = r.orig_shape[:2]
 
         # 读取真实标签
         img_name = os.path.basename(img_lists[0][idx])
-        label_path = os.path.join(label_dir, img_name.rsplit(".",1)[0]+".txt")
+        label_path = os.path.join(label_dir, img_name.rsplit(".", 1)[0] + ".txt")
         gt_boxes = []
         if os.path.exists(label_path):
-            with open(label_path, "r") as f:
+            with open(label_path) as f:
                 for line in f.readlines():
                     parts = line.strip().split()
                     if len(parts) >= 5:
@@ -124,7 +128,7 @@ for i in range(0, len(img_lists[0]), batch_size):
 # 输出结果
 # -------------------------------
 num_imgs = len(img_lists[0])
-inference_times = [r.speed['inference'] for r in all_results]
+inference_times = [r.speed["inference"] for r in all_results]
 print(f"Average inference time: {np.mean(inference_times):.4f} ms")
 print(f"Total non-IoU time (read + preprocess + inference): {non_iou_time / num_imgs:.4f} s")
 print(f"Average IoU: {np.mean(iou_list):.4f}")
