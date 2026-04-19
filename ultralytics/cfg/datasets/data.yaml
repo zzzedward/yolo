@@ -1,27 +1,25 @@
 #v2/3/4/5 crop 640
-train: 
+train:
   - /mnt/nfs_200T/optics/data/datasetv2_RGB/datasetv2_RGB/yolo_640/images/640/train
   - /mnt/nfs_200T/optics/data/datasetv3_RGB/datasetv3_RGB/yolo_640/images/640/train
-val: 
+val:
   - /mnt/nfs_200T/optics/data/datasetv4_RGB/datasetv4_RGB/yolo_640/images/640/val
 
 # Classes
 names:
-  0: UAV 
+  0: UAV
 
-channels:
- 3
-
+channels: 3
 # #v2/3/4/5 crop 2048
-# train: 
+# train:
 #   - /mnt/nfs_200T/optics/data/datasetv2_RGB/datasetv2_RGB/yolo_2048/images/train
 #   - /mnt/nfs_200T/optics/data/datasetv3_RGB/datasetv3_RGB/yolo_2048/images/train
-# val: 
+# val:
 #   - /mnt/nfs_200T/optics/data/datasetv4_RGB/datasetv4_RGB/yolo_2048/images/val
 
 # # Classes
 # names:
-#   0: UAV 
+#   0: UAV
 
 # channels:
 #  3
