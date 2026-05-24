@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.distributed as dist
+
 
 class VMoETopKRouter(nn.Module):
     def __init__(
@@ -40,23 +40,21 @@ class VMoETopKRouter(nn.Module):
         top1 = torch.zeros_like(gates)
         top1.scatter_(1, gates.argmax(dim=1, keepdim=True), 1.0)
         mean_top1 = top1.mean(dim=0)
-        return (mean_top1 * mean_gates).mean() * (E ** 2)
+        return (mean_top1 * mean_gates).mean() * (E**2)
 
     def _load_loss_top1(self, logits: torch.Tensor, logits_noisy: torch.Tensor, noise_std: float) -> torch.Tensor:
         thr = logits_noisy.max(dim=1).values  # (B,)
         z = (thr[:, None] - logits) / (noise_std + 1e-12)
         normal = torch.distributions.Normal(0.0, 1.0)
-        p = 1.0 - normal.cdf(z)             # (B,E)
-        p_mean = p.mean(dim=0)              # (E,)
+        p = 1.0 - normal.cdf(z)  # (B,E)
+        p_mean = p.mean(dim=0)  # (E,)
         return self._cv_squared(p_mean)
 
     def forward(self, feats: torch.Tensor, training: bool):
+        """expert_id: int(Top-1) metrics: dict(auxiliary_loss 等).
         """
-          expert_id: int(Top-1)
-          metrics: dict(auxiliary_loss 等)
-        """
-        logits = self.dense(feats) / self.temperature   # (B,E)
-        gates = torch.softmax(logits, dim=-1)           # (B,E)
+        logits = self.dense(feats) / self.temperature  # (B,E)
+        gates = torch.softmax(logits, dim=-1)  # (B,E)
 
         importance = self._importance_loss(gates)
 
@@ -83,11 +81,7 @@ class VMoETopKRouter(nn.Module):
 
         load = self._load_loss_top1(logits=logits, logits_noisy=logits_noisy, noise_std=noise_std)
         gshard = self._gshard_loss(gates_noisy)
-        aux = (
-            self.importance_loss_weight * importance
-            + self.load_loss_weight * load
-            + self.gshard_loss_weight * gshard
-        )
+        aux = self.importance_loss_weight * importance + self.load_loss_weight * load + self.gshard_loss_weight * gshard
 
         expert_id = int(gates_noisy.mean(dim=0).argmax().item())
         metrics = {

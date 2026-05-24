@@ -1,9 +1,9 @@
 from ultralytics import YOLO
 
-print('+++++++++++++++++++++++++++++++')
-print('tensorRT')
-print('==================================')
-print('RGB_NDVI_v23')
+print("+++++++++++++++++++++++++++++++")
+print("tensorRT")
+print("==================================")
+print("RGB_NDVI_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_NDVI_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -22,11 +22,11 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
-print('==================================')
-print('RGB_Polar_v23')
+print("==================================")
+print("RGB_Polar_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_Polar_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -45,11 +45,11 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
-print('==================================')
-print('RGB_polar_R_v23')
+print("==================================")
+print("RGB_polar_R_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_polar_R_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -68,11 +68,11 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
-print('==================================')
-print('RGB_R_v23')
+print("==================================")
+print("RGB_R_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_R_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -91,11 +91,11 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
-print('==================================')
-print('RGB_polar_R_Cam5_v23')
+print("==================================")
+print("RGB_polar_R_Cam5_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_polar_R_Cam5_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -114,14 +114,14 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
 
-print('+++++++++++++++++++++++++++++++')
-print('pt')
-print('==================================')
-print('RGB_NDVI_v23')
+print("+++++++++++++++++++++++++++++++")
+print("pt")
+print("==================================")
+print("RGB_NDVI_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_NDVI_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -133,11 +133,11 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
-print('==================================')
-print('RGB_Polar_v23')
+print("==================================")
+print("RGB_Polar_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_Polar_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -149,11 +149,11 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
-print('==================================')
-print('RGB_polar_R_v23')
+print("==================================")
+print("RGB_polar_R_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_polar_R_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -165,11 +165,11 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
-print('==================================')
-print('RGB_R_v23')
+print("==================================")
+print("RGB_R_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_R_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -181,11 +181,11 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
 
-print('==================================')
-print('RGB_polar_R_Cam5_v23')
+print("==================================")
+print("RGB_polar_R_Cam5_v23")
 # Load the YOLO11 model
 pt_path = "/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect/Cam0_polar_R_Cam5_v23/weights/best.pt"
 model = YOLO(pt_path)
@@ -197,5 +197,5 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )

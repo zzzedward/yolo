@@ -17,5 +17,5 @@ metrics = model.val(
     imgsz=640,
     amp=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect_val",
-    name="Cam0_original_v2"
+    name="Cam0_original_v2",
 )
