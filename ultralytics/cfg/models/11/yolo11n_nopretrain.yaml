@@ -49,4 +49,4 @@ head:
 
   - [[16, 19, 22], 1, Detect, [nc]] # Detect(P3, P4, P5)
 
-ch: 3  # input channels
+ch: 3 # input channels
