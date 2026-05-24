@@ -1,4 +1,3 @@
-import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 from ultralytics import YOLO
@@ -10,12 +9,12 @@ model.train(
     epochs=300,
     imgsz=640,
     batch=64,
-    device=[0,1,2,3,4,5,6,7],
+    device=[0, 1, 2, 3, 4, 5, 6, 7],
     amp=False,
     workers=0,
     cache=False,
     plots=False,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect",
-    name="cropv2"
+    name="cropv2",
 )
 # model.val()
