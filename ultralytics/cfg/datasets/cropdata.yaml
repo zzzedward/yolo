@@ -5,7 +5,6 @@ test: /mnt/nfs_200T/optics/data/datasetv2_RGB/datasetv2_RGB/yolo_2048/images/tes
 
 # Classes
 names:
-  0: UAV 
+  0: UAV
 
-channels:
- 3
+channels: 3
