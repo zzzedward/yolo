@@ -1,6 +1,8 @@
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 import sys
+
 sys.path.insert(0, "/mnt/nfs_200T/optics/SHL/ultralytics")
 from ultralytics import YOLO
 
@@ -13,6 +15,6 @@ model.train(
     amp=False,
     batch=64,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect",
-    name="Cam0_polar_R_v23"
+    name="Cam0_polar_R_v23",
 )
 model.val()
