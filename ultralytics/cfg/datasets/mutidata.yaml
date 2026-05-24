@@ -4,58 +4,57 @@
 # val: Cam0/images/val # val images (relative to 'path') 4 images
 # test: Cam0/images/test # test images (optional)
 
-# train_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam1/images/train 
-# val_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam1/images/val 
+# train_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam1/images/train
+# val_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam1/images/val
 # test_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam1/images/test
 
 # train_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam2/images/train
-# val_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam2/images/val 
-# test_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam2/images/test 
+# val_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam2/images/val
+# test_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam2/images/test
 
-# train_ch4: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam3/images/train 
+# train_ch4: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam3/images/train
 # val_ch4: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam3/images/val
-# test_ch4: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam3/images/test 
+# test_ch4: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam3/images/test
 
-# train_ch5: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam4/images/train 
+# train_ch5: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam4/images/train
 # val_ch5: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam4/images/val
-# test_ch5: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam4/images/test 
+# test_ch5: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam4/images/test
 
-# train_ch6: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam5/images/train 
+# train_ch6: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam5/images/train
 # val_ch6: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam5/images/val
-# test_ch6: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam5/images/test 
+# test_ch6: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam5/images/test
 
-# train_ch7: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam6/images/train 
+# train_ch7: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam6/images/train
 # val_ch7: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam6/images/val
-# test_ch7: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam6/images/test 
+# test_ch7: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam6/images/test
 
-# train_ch8: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam7/images/train 
+# train_ch8: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam7/images/train
 # val_ch8: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam7/images/val
-# test_ch8: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam7/images/test 
+# test_ch8: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/Cam7/images/test
 
 # # Classes
 # names:
-#   0: UAV 
+#   0: UAV
 
 # channels:
 #  10
-
 
 # path: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/ # dataset root dir
 # train: Cam0/images/train # train images (relative to 'path') 4 images
 # val: Cam0/images/val # val images (relative to 'path') 4 images
 # test: Cam0/images/test # test images (optional)
 
-# train_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/train 
-# val_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/val 
+# train_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/train
+# val_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/val
 # test_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/test
 
 # train_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/NDVI/images/train
-# val_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/NDVI/images/val 
-# test_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/NDVI/images/test 
+# val_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/NDVI/images/val
+# test_ch3: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/NDVI/images/test
 
 # # Classes
 # names:
-#   0: UAV 
+#   0: UAV
 # channels:
 #  5
 
@@ -64,31 +63,29 @@ train: Cam0/images/train # train images (relative to 'path') 4 images
 val: Cam0/images/val # val images (relative to 'path') 4 images
 test: Cam0/images/test # test images (optional)
 
-train_ch2: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/DoLP/images/train 
-val_ch2: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/DoLP/images/val 
+train_ch2: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/DoLP/images/train
+val_ch2: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/DoLP/images/val
 test_ch2: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/DoLP/images/test
 
 train_ch3: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/NDVI/images/train
-val_ch3: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/NDVI/images/val 
-test_ch3: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/NDVI/images/test 
+val_ch3: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/NDVI/images/val
+test_ch3: /mnt/nfs_200T/optics/SHL/ultralytics/test_data/NDVI/images/test
 
 # Classes
 names:
-  0: UAV 
-channels:
- 5
-
+  0: UAV
+channels: 5
 # path: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/ # dataset root dir
 # train: Cam0/images/train # train images (relative to 'path') 4 images
 # val: Cam0/images/val # val images (relative to 'path') 4 images
 # test: Cam0/images/test # test images (optional)
 
-# train_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/train 
-# val_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/val 
+# train_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/train
+# val_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/val
 # test_ch2: /mnt/nfs_200T/optics/data/datasetv2crop640_8ch20251201/yolo/DoLP/images/test
 
 # # Classes
 # names:
-#   0: UAV 
+#   0: UAV
 # channels:
 #   3
