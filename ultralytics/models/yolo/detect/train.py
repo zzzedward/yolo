@@ -1,9 +1,11 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
+from __future__ import annotations
+
 import math
 import random
 from copy import copy
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import torch
@@ -12,7 +14,7 @@ import torch.nn as nn
 from ultralytics.data import build_dataloader, build_yolo_dataset
 from ultralytics.engine.trainer import BaseTrainer
 from ultralytics.models import yolo
-from ultralytics.nn.tasks import DetectionModel, MidFusionDetectionModel, MidFusionMoEDetectionModel, CropDetectionModel
+from ultralytics.nn.tasks import CropDetectionModel, DetectionModel, MidFusionDetectionModel, MidFusionMoEDetectionModel
 from ultralytics.utils import LOGGER, RANK
 from ultralytics.utils.patches import override_configs
 from ultralytics.utils.plotting import plot_images, plot_labels, plot_results
@@ -20,11 +22,10 @@ from ultralytics.utils.torch_utils import de_parallel, torch_distributed_zero_fi
 
 
 class DetectionTrainer(BaseTrainer):
-    """
-    A class extending the BaseTrainer class for training based on a detection model.
+    """A class extending the BaseTrainer class for training based on a detection model.
 
-    This trainer specializes in object detection tasks, handling the specific requirements for training YOLO models
-    for object detection including dataset building, data loading, preprocessing, and model configuration.
+    This trainer specializes in object detection tasks, handling the specific requirements for training YOLO models for
+    object detection including dataset building, data loading, preprocessing, and model configuration.
 
     Attributes:
         model (DetectionModel): The YOLO detection model being trained.
@@ -52,9 +53,8 @@ class DetectionTrainer(BaseTrainer):
         >>> trainer.train()
     """
 
-    def build_dataset(self, img_path: str, mode: str = "train", batch: Optional[int] = None):
-        """
-        Build YOLO Dataset for training or validation.
+    def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
+        """Build YOLO Dataset for training or validation.
 
         Args:
             img_path (str): Path to the folder containing images.
@@ -68,8 +68,7 @@ class DetectionTrainer(BaseTrainer):
         return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
 
     def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
-        """
-        Construct and return dataloader for the specified mode.
+        """Construct and return dataloader for the specified mode.
 
         Args:
             dataset_path (str): Path to the dataset.
@@ -90,14 +89,10 @@ class DetectionTrainer(BaseTrainer):
         workers = self.args.workers if mode == "train" else self.args.workers * 2
         return build_dataloader(dataset, batch_size, workers, shuffle, rank)  # return dataloader
 
-    def preprocess_batch(self, batch: Dict) -> Dict:
+    def preprocess_batch(self, batch: dict) -> dict:
+        """Preprocess batch. 支持两种格式： 1) 默认 YOLO: batch["img"] 2) 自定义 multi-crop: batch["samples"] ->
+        sample["crop_samples"] -> crop_batch["img"].
         """
-        Preprocess batch.
-        支持两种格式：
-        1) 默认 YOLO: batch["img"]
-        2) 自定义 multi-crop: batch["samples"] -> sample["crop_samples"] -> crop_batch["img"]
-        """
-
         # =========================
         # 自定义 multi-crop 分支
         # =========================
@@ -157,7 +152,7 @@ class DetectionTrainer(BaseTrainer):
             batch["img"] = imgs
 
         return batch
-    
+
     def set_model_attributes(self):
         """Set model attributes based on dataset information."""
         # Nl = de_parallel(self.model).model[-1].nl  # number of detection layers (to scale hyps)
@@ -169,9 +164,8 @@ class DetectionTrainer(BaseTrainer):
         self.model.args = self.args  # attach hyperparameters to model
         # TODO: self.model.class_weights = labels_to_class_weights(dataset.labels, nc).to(device) * nc
 
-    def get_model(self, cfg: Optional[str] = None, weights: Optional[str] = None, verbose: bool = True):
-        """
-        Return a YOLO detection model.
+    def get_model(self, cfg: str | None = None, weights: str | None = None, verbose: bool = True):
+        """Return a YOLO detection model.
 
         Args:
             cfg (str | dict, optional): Path to model configuration file or parsed config dict.
@@ -204,9 +198,7 @@ class DetectionTrainer(BaseTrainer):
                 cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1
             )
         else:
-            model = DetectionModel(
-                cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1
-            )
+            model = DetectionModel(cfg, nc=self.data["nc"], ch=self.data["channels"], verbose=verbose and RANK == -1)
 
         if weights:
             model.load(weights)
@@ -219,9 +211,8 @@ class DetectionTrainer(BaseTrainer):
             self.test_loader, save_dir=self.save_dir, args=copy(self.args), _callbacks=self.callbacks
         )
 
-    def label_loss_items(self, loss_items: Optional[List[float]] = None, prefix: str = "train"):
-        """
-        Return a loss dict with labeled training loss items tensor.
+    def label_loss_items(self, loss_items: list[float] | None = None, prefix: str = "train"):
+        """Return a loss dict with labeled training loss items tensor.
 
         Args:
             loss_items (List[float], optional): List of loss values.
@@ -247,9 +238,8 @@ class DetectionTrainer(BaseTrainer):
             "Size",
         )
 
-    def plot_training_samples(self, batch: Dict[str, Any], ni: int) -> None:
-        """
-        Plot training samples with their annotations.
+    def plot_training_samples(self, batch: dict[str, Any], ni: int) -> None:
+        """Plot training samples with their annotations.
 
         Args:
             batch (Dict[str, Any]): Dictionary containing batch data.
@@ -273,8 +263,7 @@ class DetectionTrainer(BaseTrainer):
         plot_labels(boxes, cls.squeeze(), names=self.data["names"], save_dir=self.save_dir, on_plot=self.on_plot)
 
     def auto_batch(self):
-        """
-        Get optimal batch size by calculating memory occupation of model.
+        """Get optimal batch size by calculating memory occupation of model.
 
         Returns:
             (int): Optimal batch size.

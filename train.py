@@ -1,8 +1,9 @@
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+
 from ultralytics import YOLO
-import torch
 
 # midfusion
 # model = YOLO("/mnt/nfs_200T/optics/SHL/ultralytics/ultralytics/cfg/models/v5/yolov5_midfusion.yaml")
@@ -38,7 +39,7 @@ model.train(
     amp=False,
     batch=128,
     project="/mnt/nfs_200T/optics/SHL/ultralytics/runs/detect",
-    name="FLIR_yolov11"
+    name="FLIR_yolov11",
 )
 model.val()
 
